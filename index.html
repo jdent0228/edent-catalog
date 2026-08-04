@@ -50,30 +50,52 @@
   .count{padding:14px 2px 10px;font-size:12.5px;color:var(--muted);}
   .count b{color:var(--text);font-weight:700;}
 
-  /* 상품 그리드 */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
-  .card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;
-    display:flex;flex-direction:column;transition:.12s;}
+  /* 뷰 토글 아이콘 */
+  .viewtoggle{flex:0 0 auto;display:flex;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;}
+  .viewtoggle button{width:40px;height:44px;display:flex;align-items:center;justify-content:center;
+    background:var(--panel);border:none;cursor:pointer;color:var(--muted);}
+  .viewtoggle button+button{border-left:1px solid var(--line-strong);}
+  .viewtoggle button.on{background:var(--blue);color:#fff;}
+  .viewtoggle svg{width:18px;height:18px;}
+
+  /* 공통 카드 */
+  .card{border:1px solid var(--line);background:#fff;transition:.12s;overflow:hidden;}
   .card:hover{border-color:var(--line-strong);box-shadow:0 4px 16px rgba(0,0,0,.06);}
-  .thumb{position:relative;width:100%;aspect-ratio:1/1;background:var(--panel);overflow:hidden;
-    display:flex;align-items:center;justify-content:center;}
+  .thumb{position:relative;background:var(--panel);overflow:hidden;
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
   .thumb img{width:100%;height:100%;object-fit:contain;}
-  .thumb .noimg{color:var(--muted);font-size:11px;}
+  .thumb .noimg{color:var(--muted);font-size:11px;text-align:center;}
   .badge{position:absolute;top:8px;left:8px;background:rgba(25,31,40,.72);color:#fff;
     font-size:10.5px;padding:2px 7px;border-radius:6px;max-width:82%;overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap;}
-  .info{padding:10px 11px 13px;display:flex;flex-direction:column;gap:6px;flex:1;}
-  .nm{font-size:13px;font-weight:600;letter-spacing:-0.2px;word-break:keep-all;line-height:1.4;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;}
+  .nm{font-size:13px;font-weight:600;letter-spacing:-0.2px;word-break:keep-all;line-height:1.4;}
   .cat{font-size:11px;color:var(--muted);word-break:keep-all;}
-  .price{margin-top:auto;display:flex;flex-direction:column;gap:1px;}
-  .p-mem{font-size:16px;font-weight:800;color:var(--blue);letter-spacing:-0.3px;}
+  .p-mem{font-size:16px;font-weight:800;color:var(--blue);letter-spacing:-0.3px;white-space:nowrap;}
   .p-mem small{font-size:10.5px;font-weight:700;color:#fff;background:var(--blue);
     border-radius:4px;padding:1px 4px;margin-right:4px;vertical-align:1px;}
-  .p-list{font-size:12.5px;color:var(--muted-2);font-weight:600;}
+  .p-list{font-size:12.5px;color:var(--muted-2);font-weight:600;white-space:nowrap;}
   .p-list.struck{text-decoration:line-through;color:var(--muted);font-weight:500;font-size:11.5px;}
-  .p-real{font-size:11.5px;color:var(--red);font-weight:700;}
-  .p-none{font-size:12px;color:var(--muted);}
+  .p-real{font-size:11.5px;color:var(--red);font-weight:700;white-space:nowrap;}
+  .p-none{font-size:12px;color:var(--muted);white-space:nowrap;}
+
+  /* 앨범형(그리드) */
+  .grid.viewgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
+  .viewgrid .card{border-radius:14px;display:flex;flex-direction:column;}
+  .viewgrid .thumb{width:100%;aspect-ratio:1/1;}
+  .viewgrid .info{padding:10px 11px 13px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .viewgrid .info-main{display:flex;flex-direction:column;gap:4px;}
+  .viewgrid .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;}
+  .viewgrid .price{margin-top:auto;display:flex;flex-direction:column;gap:1px;}
+
+  /* 목록형(리스트) — 1행 1상품 */
+  .grid.viewlist{display:flex;flex-direction:column;gap:8px;}
+  .viewlist .card{border-radius:10px;display:flex;flex-direction:row;align-items:center;}
+  .viewlist .thumb{width:60px;height:60px;margin:8px 0 8px 8px;border-radius:8px;}
+  .viewlist .badge{display:none;}
+  .viewlist .info{flex:1;min-width:0;display:flex;flex-direction:row;align-items:center;gap:14px;padding:10px 14px;}
+  .viewlist .info-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .viewlist .nm{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .viewlist .price{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;}
 
   .empty{padding:70px 0;text-align:center;color:var(--muted);font-size:14px;}
   #sentinel{height:1px;}
@@ -99,6 +121,18 @@
         <option value="pl_asc">가격 낮은순</option>
         <option value="pl_desc">가격 높은순</option>
       </select>
+      <div class="viewtoggle">
+        <button id="viewListBtn" title="목록형" aria-label="목록형">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="6" y1="5" x2="17" y2="5"/><line x1="6" y1="10" x2="17" y2="10"/><line x1="6" y1="15" x2="17" y2="15"/>
+            <circle cx="3" cy="5" r="1.1" fill="currentColor" stroke="none"/><circle cx="3" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="3" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button id="viewGridBtn" title="앨범형" aria-label="앨범형">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <rect x="2.5" y="2.5" width="6" height="6" rx="1.3"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.3"/>
+            <rect x="2.5" y="11.5" width="6" height="6" rx="1.3"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.3"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -109,7 +143,7 @@
 
   <div class="count">검색 결과 <b id="resultCount">0</b>개</div>
 
-  <div class="grid" id="grid"></div>
+  <div class="grid viewlist" id="grid"></div>
   <div class="empty" id="empty" style="display:none;">조건에 맞는 상품이 없습니다.</div>
   <div class="loadmore" id="loadmore" style="display:none;"><button id="loadmoreBtn">더 보기</button></div>
   <div id="sentinel"></div>
@@ -200,8 +234,10 @@
         (x.origin?'<span class="badge">'+esc(x.origin)+'</span>':'')+
       '</div>'+
       '<div class="info">'+
-        '<div class="nm">'+esc(x.name)+'</div>'+
-        '<div class="cat">'+esc(x.cat2||x.cat1||'')+'</div>'+
+        '<div class="info-main">'+
+          '<div class="nm">'+esc(x.name)+'</div>'+
+          '<div class="cat">'+esc(x.cat2||x.cat1||'')+'</div>'+
+        '</div>'+
         '<div class="price">'+priceBlock+'</div>'+
       '</div></a>';
   }
@@ -226,6 +262,22 @@
   },{rootMargin:'600px'});
   io.observe(document.getElementById('sentinel'));
   document.getElementById('loadmoreBtn').addEventListener('click',renderMore);
+
+  // ----- 뷰 모드(목록형 기본 / 앨범형) -----
+  var VIEW_KEY='edent_view';
+  var listBtn=document.getElementById('viewListBtn'), gridBtn=document.getElementById('viewGridBtn');
+  function setView(mode){
+    var isList=(mode!=='grid');
+    grid.classList.toggle('viewlist',isList);
+    grid.classList.toggle('viewgrid',!isList);
+    listBtn.classList.toggle('on',isList);
+    gridBtn.classList.toggle('on',!isList);
+    try{localStorage.setItem(VIEW_KEY,isList?'list':'grid');}catch(e){}
+  }
+  listBtn.addEventListener('click',function(){setView('list');});
+  gridBtn.addEventListener('click',function(){setView('grid');});
+  var savedView='list'; try{savedView=localStorage.getItem(VIEW_KEY)||'list';}catch(e){}
+  setView(savedView);
 
   // 검색 입력(디바운스)
   var qEl=document.getElementById('q'), t=null;
