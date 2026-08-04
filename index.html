@@ -68,9 +68,11 @@
   .cat{font-size:11px;color:var(--muted);word-break:keep-all;}
   .price{margin-top:auto;display:flex;flex-direction:column;gap:1px;}
   .p-mem{font-size:16px;font-weight:800;color:var(--blue);letter-spacing:-0.3px;}
-  .p-mem small{font-size:11px;font-weight:600;color:var(--blue);margin-right:3px;}
+  .p-mem small{font-size:10.5px;font-weight:700;color:#fff;background:var(--blue);
+    border-radius:4px;padding:1px 4px;margin-right:4px;vertical-align:1px;}
   .p-list{font-size:12.5px;color:var(--muted-2);font-weight:600;}
   .p-list.struck{text-decoration:line-through;color:var(--muted);font-weight:500;font-size:11.5px;}
+  .p-real{font-size:11.5px;color:var(--red);font-weight:700;}
   .p-none{font-size:12px;color:var(--muted);}
 
   .empty{padding:70px 0;text-align:center;color:var(--muted);font-size:14px;}
@@ -159,7 +161,13 @@
       loadmore=document.getElementById('loadmore');
   var filtered=[], shown=0;
 
-  function priceKey(x){var p=(x.priceReal!=null?x.priceReal:x.priceList);return p==null?Infinity:p;}
+  function mainPrice(x){
+    if(x.priceMember!=null && x.priceMember>0) return x.priceMember;   // 회원가 우선
+    if(x.priceReal!=null && x.priceReal>0) return x.priceReal;
+    if(x.priceList!=null && x.priceList>0) return x.priceList;
+    return null;
+  }
+  function priceKey(x){var p=mainPrice(x);return p==null?Infinity:p;}
   function compute(){
     var qq=q.trim().toLowerCase();
     filtered=items.filter(function(x){
@@ -174,12 +182,13 @@
   }
 
   function cardHTML(x){
-    var list=x.priceList, main=(x.priceReal!=null?x.priceReal:list);
-    var isMember=(x.priceMember!=null);   // 로그인 크롤 데이터
+    var list=x.priceList, real=x.priceReal, main=mainPrice(x);
+    var isMember=(x.priceMember!=null && x.priceMember>0 && main===x.priceMember);
     var priceBlock;
     if(main!=null){
-      priceBlock='<div class="p-mem">'+(isMember?'<small>회원</small>':'')+won(main)+'</div>'+
-        (list!=null&&list!==main?'<div class="p-list struck">정가 '+won(list)+'</div>':'');
+      priceBlock='<div class="p-mem">'+(isMember?'<small>회원</small>':'')+won(main)+'</div>';
+      if(list!=null && list>main) priceBlock+='<div class="p-list struck">정가 '+won(list)+'</div>';
+      if(real!=null && real>0 && real<main) priceBlock+='<div class="p-real">실구매 '+won(real)+'</div>';
     } else {
       priceBlock='<div class="p-none">가격 문의</div>';
     }
