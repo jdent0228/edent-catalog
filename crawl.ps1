@@ -266,6 +266,23 @@ foreach ($bk in $buckets) {
   if ($bi % 25 -eq 0) { Write-Host ("  진행 $bi/$($buckets.Count) 버킷 · 요청 $reqCount · 상품 $($items.Count)") }
 }
 
+# ================= 4.4 안전장치 (크롤 실패 시 좋은 데이터 덮어쓰기 방지) =================
+# 클라우드(Actions) 등에서 접근이 막혀 목록 크롤이 사실상 실패하는 사고가 있었음.
+# 신선 수집분이 비정상적으로 적으면 파일을 쓰지 않고 실패 종료한다.
+$freshCount = $items.Count
+$minExpected = 3000
+if ($old.Count -gt 0) {
+  # 직전 대비 60% 미만이면 이상으로 간주 (변형상품 승계분은 제외한 목록 기준 비교)
+  $oldListing = @($old.Values | Where-Object {
+    -not $_.PSObject.Properties['gid'] -or -not $_.gid -or $_.gid -eq 'solo' -or $_.gid -eq $_.id
+  }).Count
+  if ($oldListing -gt 1000) { $minExpected = [int]($oldListing * 0.6) }
+}
+if ($freshCount -lt $minExpected) {
+  throw "목록 크롤 실패 의심: 신선 수집 $freshCount개 (기대 최소 $minExpected개). 로그인=$loggedIn. 데이터를 쓰지 않고 중단합니다."
+}
+Write-Host "안전장치 통과: 신선 수집 $freshCount개 (기준 $minExpected개 이상)"
+
 # ================= 4.5 이전 데이터 승계 =================
 # 목록에 안 나오는 변형상품(그룹 형제) 유지 — 현재 스키마로 정규화해 재추가.
 # (가격/이름/규격은 이번 실행의 그룹 재조회에서 다시 갱신됨)
@@ -276,7 +293,9 @@ foreach ($oid in $old.Keys) {
   $o = $old[$oid]
   if ($items.ContainsKey($oid)) { continue }
   $og = OldProp $o 'gid'
-  if ($og -and $og -ne 'solo' -and $og -ne $oid) {
+  # 그룹에 속한 상품은 대표(gid==자기자신)도 유지한다.
+  # (과거엔 대표를 제외해 크롤 실패 시 대표만 사라지는 사고가 있었음)
+  if ($og -and $og -ne 'solo') {
     $items[$oid] = [pscustomobject]@{
       id = $oid; name = [string](OldProp $o 'name')
       company = [string]$(if (OldProp $o 'company') { OldProp $o 'company' } else { OldProp $o 'origin' })

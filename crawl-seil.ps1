@@ -136,7 +136,21 @@ foreach ($xc in $xcodes) {
   Write-Host "  [$ci/$($xcodes.Count)] $c1 (xcode=$xc) 누적 $($items.Count)"
 }
 
-# ================= 4. 출력 =================
+# ================= 4. 안전장치 + 출력 =================
+# 크롤이 사실상 실패했는데 좋은 데이터를 덮어쓰는 것을 막는다.
+$minExpected = 1000
+$prevFile = Join-Path $PSScriptRoot 'data-seil.json'
+if (Test-Path $prevFile) {
+  try {
+    $prev = Get-Content $prevFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($prev.count -gt 1000) { $minExpected = [int]($prev.count * 0.6) }
+  } catch {}
+}
+if ($items.Count -lt $minExpected) {
+  throw "세일글로벌 크롤 실패 의심: 수집 $($items.Count)개 (기대 최소 $minExpected개). 데이터를 쓰지 않고 중단합니다."
+}
+Write-Host "안전장치 통과: 수집 $($items.Count)개 (기준 $minExpected개 이상)"
+
 $list = $items.Values | Sort-Object name
 $payload = [ordered]@{
   shop        = 'seil'

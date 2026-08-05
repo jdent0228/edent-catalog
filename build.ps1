@@ -1,4 +1,4 @@
-# 멀티샵 데이터 병합: data-edent.json + data-seil.json → data.js / data.json
+﻿# 멀티샵 데이터 병합: data-edent.json + data-seil.json → data.js / data.json
 # 사용법:  powershell -ExecutionPolicy Bypass -File build.ps1
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +25,16 @@ foreach ($src in @(
   }
   $shops[$src.shop] = [ordered]@{ label = $src.label; count = $n; generatedAt = $d.generatedAt }
   Write-Host "$($src.label): $n개 ($($d.generatedAt))"
+}
+
+# 안전장치: 병합 결과가 비정상적으로 적으면 기존 data.js를 덮어쓰지 않는다
+$prevCount = 0
+$prevFile = Join-Path $PSScriptRoot 'data.json'
+if (Test-Path $prevFile) {
+  try { $prevCount = (Get-Content $prevFile -Raw -Encoding UTF8 | ConvertFrom-Json).count } catch {}
+}
+if ($prevCount -gt 1000 -and $all.Count -lt [int]($prevCount * 0.6)) {
+  throw "병합 결과 이상: $($all.Count)개 (직전 $prevCount개). data.js를 덮어쓰지 않고 중단합니다."
 }
 
 $payload = [ordered]@{

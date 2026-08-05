@@ -20,6 +20,24 @@ jobs:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
 
+      - name: 접근 진단 (클라우드에서 쇼핑몰 응답 확인)
+        shell: pwsh
+        run: |
+          foreach ($u in @(
+            'https://www.edent.co.kr/program/show_cate_all_make.php',
+            'https://www.edent.co.kr/shop/shop_list.php?cate1=2',
+            'https://www.seilglobal.co.kr/shop/shopbrand.html?xcode=002'
+          )) {
+            try {
+              $r = Invoke-WebRequest -Uri $u -UseBasicParsing -TimeoutSec 30 `
+                    -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+              $n = ([regex]::Matches($r.Content, 'pd_idx=|branduid=')).Count
+              Write-Host "OK  $u → HTTP $($r.StatusCode), $($r.RawContentLength) bytes, 상품링크 $n개"
+            } catch {
+              Write-Host "FAIL $u → $($_.Exception.Message)"
+            }
+          }
+
       - name: 이덴트 크롤 (회원가 + 규격그룹 + 제조국)
         shell: pwsh
         env:
