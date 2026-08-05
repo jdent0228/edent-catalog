@@ -331,7 +331,7 @@
     // 키: 샵 네임스페이스 (즐겨찾기·그룹 충돌 방지)
     x._key=x.shop+':'+x.id;
     x._gk=x.shop+':'+((x.gid && x.gid!=='solo')?String(x.gid):'s'+x.id);
-    var t=(x.name||'')+'|'+(x.spec||'')+'|'+(x.company||'')+'|'+(x.country||'')+'|'+(x.code||'');
+    var t=(x.name||'')+'|'+(x.spec||'')+'|'+(x.company||'')+'|'+(x.country||'')+'|'+(x.code||'')+'|'+(x.kw||'');
     x._sn=norm(t);
     x._sc=toCho(x._sn);
   });
