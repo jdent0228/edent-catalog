@@ -136,9 +136,13 @@ function Parse-Products([string]$html) {
     $mm = [regex]::Match($mid, '@\s*[\d,]+\s*원\s*<br>\s*\d*@\s*(?:(?:특가)?로그인|([\d,]+)\s*원)')
     if ($mm.Success -and $mm.Groups[1].Value) { $pMember = ToInt $mm.Groups[1].Value }
 
+    # 규격보기 버튼 = 규격그룹 보유 (목록에 노출되는 확실한 신호)
+    $hasGroup = [bool]($mid -match 'show_group_div\(')
+
     $out.Add([pscustomobject]@{
       id = $pdid; name = $nm; origin = $origin; spec = $spec
       priceList = $pList; priceMember = $pMember; priceReal = $pReal
+      hasGroup = $hasGroup
     })
   }
   , $out
@@ -185,6 +189,7 @@ foreach ($bk in $buckets) {
         if ($null -eq $rec.priceReal)   { $rec.priceReal = $p.priceReal }
         if (-not $rec.origin) { $rec.origin = $p.origin }
         if (-not $rec.spec) { $rec.spec = $p.spec }
+        if ($p.hasGroup) { $rec.hasGroup = $true }
       } else {
         $items[$p.id] = [pscustomobject]@{
           id = $p.id; name = $p.name; origin = $p.origin; spec = $p.spec
@@ -194,7 +199,7 @@ foreach ($bk in $buckets) {
           cats = @($catPath)
           img = "$Base/data/product/img_m1_$($p.id)"
           url = "$Base/shop/item.php?pd_idx=$($p.id)"
-          pkg = ''; gid = ''
+          pkg = ''; gid = ''; hasGroup = $p.hasGroup
         }
       }
     }
@@ -223,7 +228,7 @@ foreach ($oid in $old.Keys) {
 # 상세페이지의 그룹 테이블(형제 상품: 코드번호 + 규격 + 포장단위 + 가격)을 파싱.
 # 그룹당 1회만 방문: 방문 시 형제 전원 covered 처리 + gid 기록 → 다음 실행부터 그룹 대표만 재방문.
 function Parse-GroupRows([string]$html) {
-  $anchors = [regex]::Matches($html, '<a href="/shop/item\.php\?pd_idx=(\d+)&">\s*(\d{2,6}-\d{2,6})\s*</a>')
+  $anchors = [regex]::Matches($html, '<a href="/shop/item\.php\?pd_idx=(\d+)[^"]*">\s*(\d{2,6}-\d{2,6})\s*</a>')
   $rows = [System.Collections.Generic.List[object]]::new()
   for ($i = 0; $i -lt $anchors.Count; $i++) {
     $st = $anchors[$i].Index
@@ -232,7 +237,7 @@ function Parse-GroupRows([string]$html) {
     $vid = $anchors[$i].Groups[1].Value
 
     $nm = ''
-    foreach ($nmM in [regex]::Matches($reg, 'pd_idx=' + $vid + '&">([^<]+)</a>')) {
+    foreach ($nmM in [regex]::Matches($reg, 'pd_idx=' + $vid + '[^"]*">([^<]+)</a>')) {
       $t = (Dec $nmM.Groups[1].Value)
       if ($t -notmatch '^\d{2,6}-\d{2,6}$') { $nm = $t; break }
     }
@@ -256,23 +261,32 @@ function Parse-GroupRows([string]$html) {
   , $rows
 }
 
+# 경량 그룹 엔드포인트: POST /program/show_group_list.php (param1=pd_idx) → 그룹 전체 행 반환(~9KB)
+function Get-GroupHtml([string]$pdIdx) {
+  $r = Invoke-WebRequest -Uri "$Base/program/show_group_list.php" -Method Post `
+    -Body "&param1=$pdIdx&param2=&param3=&param4=&param5=" `
+    -ContentType 'application/x-www-form-urlencoded' `
+    -WebSession $script:session -UserAgent $ua -UseBasicParsing -TimeoutSec 30
+  [System.Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray())
+}
+
 if ($Details) {
-  # 방문 대상: gid 없는 상품(신규/미분류) + 그룹 대표(gid == 자기 id)
+  # 방문 대상: 목록에 '규격보기' 버튼이 있는 상품만 (그룹 보유 확정 신호).
+  # 같은 그룹의 형제가 이미 covered면 생략 → 그룹당 1회 요청.
   $targets = @($items.Keys | Where-Object {
-    $g = $items[$_].gid
-    (-not $g) -or ($g -eq $_)
+    $rec = $items[$_]
+    $rec.PSObject.Properties['hasGroup'] -and $rec.hasGroup
   })
   if ($DetailsMax -gt 0 -and $targets.Count -gt $DetailsMax) { $targets = $targets[0..($DetailsMax - 1)] }
-  Write-Host "상세(규격) 크롤 대상: $($targets.Count)개"
+  Write-Host "규격그룹 크롤 대상(규격보기 보유): $($targets.Count)개"
   $covered = @{}; $dv = 0; $newVar = 0
   foreach ($tid in $targets) {
     if ($covered.ContainsKey($tid)) { continue }
-    try { $dh = Get-Html "$Base/shop/item.php?pd_idx=$tid" } catch { Write-Warning "상세 실패 $tid"; continue }
+    try { $dh = Get-GroupHtml $tid } catch { Write-Warning "그룹조회 실패 $tid"; continue }
     $dv++
     $rep = $items[$tid]
     $covered[$tid] = 1
     $rows = Parse-GroupRows $dh
-    # 형제 규격이 있으면 진짜 그룹(대표=재방문 대상), 없으면 solo(이후 방문 생략)
     $rep.gid = $(if ($rows.Count -ge 2) { $tid } else { 'solo' })
     foreach ($row in $rows) {
       $covered[$row.id] = 1
@@ -297,9 +311,9 @@ if ($Details) {
       }
     }
     if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
-    if ($dv % 100 -eq 0) { Write-Host "  상세 진행 $dv (신규 변형 $newVar)" }
+    if ($dv % 100 -eq 0) { Write-Host "  그룹조회 진행 $dv/$($targets.Count) (신규 변형 $newVar)" }
   }
-  Write-Host "상세 완료: 방문 $($dv)회 · 신규 변형상품 $($newVar)개"
+  Write-Host "그룹 크롤 완료: 요청 $($dv)회 · 신규 변형상품 $($newVar)개"
 }
 
 # ================= 5. 출력 =================
