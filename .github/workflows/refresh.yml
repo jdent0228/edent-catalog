@@ -1,4 +1,4 @@
-name: 이덴트 카탈로그 갱신
+name: 카탈로그 갱신
 
 on:
   schedule:
@@ -20,18 +20,26 @@ jobs:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
 
-      - name: 전체 크롤 (회원가 + 규격그룹 포함)
+      - name: 이덴트 크롤 (회원가 + 규격그룹 + 제조국)
         shell: pwsh
         env:
           EDENT_ID: ${{ secrets.EDENT_ID }}
           EDENT_PW: ${{ secrets.EDENT_PW }}
         run: ./crawl.ps1 -Details
 
+      - name: 세일글로벌 크롤 (비로그인)
+        shell: pwsh
+        run: ./crawl-seil.ps1
+
+      - name: 통합 빌드
+        shell: pwsh
+        run: ./build.ps1
+
       - name: 변경분 커밋 & 푸시
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.json data.js company-map.json
+          git add data.json data.js data-edent.json data-seil.json company-map.json
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 생략"
           else

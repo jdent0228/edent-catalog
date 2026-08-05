@@ -149,9 +149,10 @@ function Parse-Products([string]$html) {
     if ($mm.Success -and $mm.Groups[1].Value) { $pMember = ToInt $mm.Groups[1].Value }
 
     # 목록 상품명은 "이름 + 규격"이 이어붙은 형태 → 이름 끝이 규격과 겹치면 잘라냄
+    # (단, 이름 전체가 규격과 동일한 상품은 그대로 둠 — 이름이 비어버리는 사고 방지)
     if ($spec) {
       $spT = $spec.Trim()
-      if ($spT -and $nm.TrimEnd().EndsWith($spT)) {
+      if ($spT -and $nm.TrimEnd().EndsWith($spT) -and $nm.TrimEnd().Length -gt $spT.Length) {
         $nm = $nm.TrimEnd().Substring(0, $nm.TrimEnd().Length - $spT.Length).Trim()
       }
     }
@@ -208,7 +209,8 @@ function Get-MaxPage([string]$html) {
 # ================= 4. 순회 =================
 # 이전 크롤 결과 로드 (그룹정보 gid 승계 + 목록에 없는 변형상품 유지용)
 $old = @{}
-$oldFile = Join-Path $PSScriptRoot 'data.json'
+$oldFile = Join-Path $PSScriptRoot 'data-edent.json'
+if (-not (Test-Path $oldFile)) { $oldFile = Join-Path $PSScriptRoot 'data.json' }   # 구버전 호환
 if (Test-Path $oldFile) {
   try {
     $oldData = Get-Content $oldFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -457,8 +459,10 @@ if ($Details) {
 }
 
 # ================= 5. 출력 =================
+# 멀티샵 구조: 이 크롤러는 data-edent.json만 생성. 통합본(data.js)은 build.ps1이 만든다.
 $list = $items.Values | Sort-Object name
 $payload = [ordered]@{
+  shop        = 'edent'
   generatedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm')
   loggedIn    = $loggedIn
   count       = $list.Count
@@ -466,6 +470,5 @@ $payload = [ordered]@{
 }
 $json = $payload | ConvertTo-Json -Depth 6
 $enc = New-Object System.Text.UTF8Encoding($false)   # BOM 없음
-[System.IO.File]::WriteAllText((Join-Path $PSScriptRoot 'data.js'),   "window.EDENT_DATA = $json;", $enc)
-[System.IO.File]::WriteAllText((Join-Path $PSScriptRoot 'data.json'), $json, $enc)
+[System.IO.File]::WriteAllText((Join-Path $PSScriptRoot 'data-edent.json'), $json, $enc)
 Write-Host ("완료: 상품 $($list.Count)개 · 요청 $($reqCount)회 · 회원가수집 $loggedIn")

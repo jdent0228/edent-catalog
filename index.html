@@ -149,6 +149,10 @@
   .viewlist .c-comp{text-align:center;}
   .comp-txt{font-size:12px;color:var(--muted-2);word-break:keep-all;line-height:1.3;}
   .comp-ct{font-size:10.5px;color:var(--muted);margin-top:1px;}
+  .shop-tag{display:inline-block;font-size:9.5px;border-radius:4px;padding:0 5px;margin-top:3px;line-height:16px;}
+  .shop-edent{background:var(--blue-soft);color:var(--blue);}
+  .shop-seil{background:#e6fcf5;color:#0ca678;}
+  mark{background:#ffe8a3;color:inherit;padding:0 1px;border-radius:3px;}
   .viewlist .c-price{display:flex;flex-direction:column;align-items:flex-end;gap:0;text-align:right;}
   .viewlist .c-act{display:flex;align-items:center;justify-content:center;gap:0;}
 
@@ -203,7 +207,9 @@
       <span>카테고리 필터 <b id="catSel"></b></span><i id="sideArrow">▾</i>
     </button>
     <div class="side-body">
-      <div class="side-title">카테고리</div>
+      <div class="side-title">쇼핑몰</div>
+      <div class="cats" id="shopChips" style="padding-top:4px;"></div>
+      <div class="side-title" style="margin-top:14px;">카테고리</div>
       <div class="cat-tools">
         <button id="catAll">전체 선택</button><button id="catNone">전체 해제</button>
       </div>
@@ -245,8 +251,8 @@
   <div class="table-zone">
     <div class="lhead" id="listHead">
       <div class="c-cat">카테고리</div>
-      <div class="c-comp">회사</div>
       <div class="c-img">사진</div>
+      <div class="c-comp">회사</div>
       <div class="c-main">상품명 / 코드</div>
       <div class="c-spec">규격</div>
       <div class="c-pkg">포장</div>
@@ -300,15 +306,21 @@
     document.body.removeChild(ta);
   }
 
-  // ----- 검색 인덱스: 초성 + 공백제거 (상품명+규격+브랜드+코드) -----
+  // ----- 검색 인덱스: 초성 + 구분자 무시 (TR-13 = TR13 = TR 13) -----
   var CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
   function toCho(s){var o='';for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
     if(c>=0xAC00&&c<=0xD7A3)o+=CHO[Math.floor((c-0xAC00)/588)];else o+=s[i];}return o;}
-  function norm(s){return(s||'').toLowerCase().replace(/\s+/g,'');}
+  var SEP_RX=/[\s\-_./·(),*]/;               // 검색 시 무시할 구분자
+  var SEP_RX_G=/[\s\-_./·(),*]/g;
+  function norm(s){return(s||'').toLowerCase().replace(SEP_RX_G,'');}
+
+  var SHOPS={edent:'이덴트', seil:'세일글로벌'};
   items.forEach(function(x){
-    // 필드 정규화 (과거 스키마 origin → company)
+    // 필드 정규화 (과거 스키마 origin → company, 샵 기본값)
+    x.shop=x.shop||'edent';
     x.company=x.company||x.origin||'';
     x.country=x.country||'';
+    if((!x.name||/^\s*$/.test(x.name)) && x.spec) x.name=x.spec;   // 이름 공백 방어
     // 상품명 끝에 규격이 중복으로 붙어 있으면 잘라냄 (목록 원본이 이름+규격 결합 형태)
     if(x.spec && x.name){
       var sp=x.spec.trim(), nmT=x.name.replace(/\s+$/,'');
@@ -316,17 +328,61 @@
         x.name=nmT.slice(0,nmT.length-sp.length).replace(/\s+$/,'');
       }
     }
-    // 그룹 키 (동일 그룹 연속 표시용)
-    x._gk=(x.gid && x.gid!=='solo')?String(x.gid):'s'+x.id;
-    var t=(x.name||'')+' '+(x.spec||'')+' '+(x.company||'')+' '+(x.country||'')+' '+(x.code||'');
+    // 키: 샵 네임스페이스 (즐겨찾기·그룹 충돌 방지)
+    x._key=x.shop+':'+x.id;
+    x._gk=x.shop+':'+((x.gid && x.gid!=='solo')?String(x.gid):'s'+x.id);
+    var t=(x.name||'')+'|'+(x.spec||'')+'|'+(x.company||'')+'|'+(x.country||'')+'|'+(x.code||'');
     x._sn=norm(t);
     x._sc=toCho(x._sn);
   });
 
+  // ----- 검색어 하이라이트 -----
+  var curTokens=[];
+  function buildNormMap(s){
+    var chars=[],map=[];
+    for(var i=0;i<s.length;i++){
+      var c=s[i].toLowerCase();
+      if(SEP_RX.test(c)) continue;
+      chars.push(c); map.push(i);
+    }
+    return {n:chars.join(''),map:map};
+  }
+  function hl(text){
+    text=(text==null?'':String(text));
+    if(!curTokens.length||!text) return esc(text);
+    var nm=buildNormMap(text);
+    if(!nm.n) return esc(text);
+    var cho=toCho(nm.n);
+    var marks=new Array(text.length);
+    var found=false;
+    curTokens.forEach(function(tk){
+      if(!tk) return;
+      [nm.n,cho].forEach(function(hay){
+        var idx=0;
+        while((idx=hay.indexOf(tk,idx))!==-1){
+          var s=nm.map[idx], e=nm.map[idx+tk.length-1];
+          for(var i=s;i<=e;i++) marks[i]=true;
+          found=true; idx+=1;
+        }
+      });
+    });
+    if(!found) return esc(text);
+    var out='',buf='',inM=false;
+    for(var i=0;i<text.length;i++){
+      var m=!!marks[i];
+      if(m!==inM){ out+=esc(buf)+(m?'<mark>':'</mark>'); buf=''; inM=m; }
+      buf+=text[i];
+    }
+    out+=esc(buf)+(inM?'</mark>':'');
+    return out;
+  }
+
   // ----- 즐겨찾기 -----
   var FAV_KEY='edent_favs';
   var favs=new Set();
-  try{ (JSON.parse(localStorage.getItem(FAV_KEY)||'[]')||[]).forEach(function(v){favs.add(String(v));}); }catch(e){}
+  try{ (JSON.parse(localStorage.getItem(FAV_KEY)||'[]')||[]).forEach(function(v){
+    v=String(v); if(v.indexOf(':')===-1) v='edent:'+v;   // 구버전 키 마이그레이션
+    favs.add(v); }); }catch(e){}
   var favOnly=false;
   var favCountEl=document.getElementById('favCount'), favFilterBtn=document.getElementById('favFilter');
   function saveFavs(){ try{localStorage.setItem(FAV_KEY,JSON.stringify(Array.from(favs)));}catch(e){} }
@@ -335,6 +391,25 @@
   favFilterBtn.addEventListener('click',function(){
     favOnly=!favOnly; favFilterBtn.classList.toggle('on',favOnly); apply();
   });
+
+  // ----- 쇼핑몰 칩 -----
+  var fShop=new Set(), shopChipRefs=[];
+  (function(){
+    var m={}; items.forEach(function(x){m[x.shop]=(m[x.shop]||0)+1;});
+    var cont=document.getElementById('shopChips');
+    Object.keys(m).forEach(function(v){
+      fShop.add(v);
+      var el=document.createElement('div');el.className='chip on';
+      el.innerHTML=esc(SHOPS[v]||v)+' <i>'+m[v]+'</i>';
+      el.addEventListener('click',function(){
+        if(fShop.has(v)){fShop.delete(v);el.classList.remove('on');}
+        else{fShop.add(v);el.classList.add('on');}
+        apply();
+      });
+      shopChipRefs.push({v:v,el:el});
+      cont.appendChild(el);
+    });
+  })();
 
   // ----- 카테고리(대분류) 칩 -----
   var fCat=new Set(), chipRefs=[];
@@ -393,9 +468,11 @@
   function gminCmp(a,b){var x=gmin[a._gk],y=gmin[b._gk];return x===y?0:(x<y?-1:1);}
 
   function compute(){
-    var tokens=q.trim().toLowerCase().split(/\s+/).filter(Boolean).map(function(t){return t.replace(/\s+/g,'');});
+    var tokens=q.trim().split(/\s+/).map(norm).filter(Boolean);
+    curTokens=tokens;
     filtered=items.filter(function(x){
-      if(favOnly && !favs.has(String(x.id))) return false;
+      if(favOnly && !favs.has(x._key)) return false;
+      if(!fShop.has(x.shop)) return false;
       if(!fCat.has(x.cat1||'기타')) return false;
       for(var i=0;i<tokens.length;i++){
         var tk=tokens[i];
@@ -441,12 +518,12 @@
     return '<button class="iconbtn act-share" data-url="'+esc(x.url)+'" title="링크 복사(공유)">'+SVG_SHARE+'</button>';
   }
   function favBtnHTML(x,extra){
-    var on=favs.has(String(x.id));
-    return '<button class="iconbtn favheart'+(on?' on':'')+(extra?' '+extra:'')+'" data-fav="'+esc(x.id)+'" title="즐겨찾기">'+SVG_HEART+'</button>';
+    var on=favs.has(x._key);
+    return '<button class="iconbtn favheart'+(on?' on':'')+(extra?' '+extra:'')+'" data-fav="'+esc(x._key)+'" title="즐겨찾기">'+SVG_HEART+'</button>';
   }
   function codeHTML(x){
     if(!x.code) return '';
-    return '<span class="codechip act-code" data-code="'+esc(x.code)+'" title="클릭하면 코드 복사">'+esc(x.code)+'</span>';
+    return '<span class="codechip act-code" data-code="'+esc(x.code)+'" title="클릭하면 코드 복사">'+hl(x.code)+'</span>';
   }
 
   // ----- 목록형 행 -----
@@ -457,12 +534,13 @@
   }
   function rowHTML(x){
     return '<div class="card" data-url="'+esc(x.url)+'">'+
-      '<div class="c-cat">'+esc(x.cat1||'')+'</div>'+
-      '<div class="c-comp"><div class="comp-txt">'+esc(x.company||'-')+'</div>'+
-        (x.country?'<div class="comp-ct">'+esc(x.country)+'</div>':'')+'</div>'+
+      '<div class="c-cat">'+esc(x.cat1||'')+
+        '<br><span class="shop-tag shop-'+esc(x.shop)+'">'+esc(SHOPS[x.shop]||x.shop)+'</span></div>'+
       '<div class="c-img">'+thumbHTML(x)+'</div>'+
-      '<div class="c-main"><div class="nm">'+esc(x.name)+'</div>'+codeHTML(x)+'</div>'+
-      '<div class="c-spec"><div class="spec-txt">'+esc(x.spec||'-')+'</div></div>'+
+      '<div class="c-comp"><div class="comp-txt">'+(x.company?hl(x.company):'-')+'</div>'+
+        (x.country?'<div class="comp-ct">'+esc(x.country)+'</div>':'')+'</div>'+
+      '<div class="c-main"><div class="nm">'+hl(x.name)+'</div>'+codeHTML(x)+'</div>'+
+      '<div class="c-spec"><div class="spec-txt">'+(x.spec?hl(x.spec):'-')+'</div></div>'+
       '<div class="c-pkg"><div class="pkg-txt">'+esc(x.pkg||'-')+'</div></div>'+
       '<div class="c-price">'+priceHTML(x)+'</div>'+
       '<div class="c-act">'+actHTML(x)+favBtnHTML(x)+'</div>'+
@@ -484,7 +562,7 @@
         favBtnHTML(x,'gfav')+
       '</div>'+
       '<div class="info">'+
-        '<div class="nm">'+esc(x.name)+'</div>'+
+        '<div class="nm">'+hl(x.name)+'</div>'+
         codeHTML(x)+
         (subParts.length?'<div class="sub">'+subParts.join(' · ')+'</div>':'')+
         '<div class="foot"><div class="price">'+priceHTML(x)+'</div>'+
