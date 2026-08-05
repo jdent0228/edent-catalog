@@ -103,6 +103,9 @@ function Parse-Products([string]$html) {
   # 이름링크 → (다음 상품 링크 전까지) → 실구매가 볼드금액.  (추천/하단 링크는 실구매가 없어 자동 제외)
   $pat = '(?s)item\.php\?pd_idx=(\d+)[^"]*">([^<]+)</a>((?:(?!item\.php\?pd_idx).){0,1800}?)실구매\s*가격\s*<br>\s*<span[^>]*>\s*<b>\s*\d*@\s*([\d,]+)\s*원'
   $ms = [regex]::Matches($html, $pat)
+  # 상품코드: 메인그리드 행 첫 셀(<tr bgcolor="#FFFFFF"><td ...>0392-1962<p>)에 위치 → 위치 사전 스캔
+  $codePos = [regex]::Matches($html, '<tr bgcolor="#FFFFFF">\s*<td[^>]*>\s*(\d{2,6}-\d{2,6})\s*<') |
+    ForEach-Object { [pscustomobject]@{ idx = $_.Index; code = $_.Groups[1].Value } }
   $seen = @{}; $out = [System.Collections.Generic.List[object]]::new()
   foreach ($m in $ms) {
     $pdid = $m.Groups[1].Value
@@ -136,13 +139,28 @@ function Parse-Products([string]$html) {
     $mm = [regex]::Match($mid, '@\s*[\d,]+\s*원\s*<br>\s*\d*@\s*(?:(?:특가)?로그인|([\d,]+)\s*원)')
     if ($mm.Success -and $mm.Groups[1].Value) { $pMember = ToInt $mm.Groups[1].Value }
 
+    # 목록 상품명은 "이름 + 규격"이 이어붙은 형태 → 이름 끝이 규격과 겹치면 잘라냄
+    if ($spec) {
+      $spT = $spec.Trim()
+      if ($spT -and $nm.TrimEnd().EndsWith($spT)) {
+        $nm = $nm.TrimEnd().Substring(0, $nm.TrimEnd().Length - $spT.Length).Trim()
+      }
+    }
+
     # 규격보기 버튼 = 규격그룹 보유 (목록에 노출되는 확실한 신호)
     $hasGroup = [bool]($mid -match 'show_group_div\(')
+
+    # 상품코드: 이름 링크 직전(3000자 이내)의 마지막 행시작 코드
+    $code = ''
+    foreach ($cp in $codePos) {
+      if ($cp.idx -lt $m.Index -and ($m.Index - $cp.idx) -lt 3000) { $code = $cp.code }
+      elseif ($cp.idx -ge $m.Index) { break }
+    }
 
     $out.Add([pscustomobject]@{
       id = $pdid; name = $nm; origin = $origin; spec = $spec
       priceList = $pList; priceMember = $pMember; priceReal = $pReal
-      hasGroup = $hasGroup
+      hasGroup = $hasGroup; code = $code
     })
   }
   , $out
@@ -190,6 +208,7 @@ foreach ($bk in $buckets) {
         if (-not $rec.origin) { $rec.origin = $p.origin }
         if (-not $rec.spec) { $rec.spec = $p.spec }
         if ($p.hasGroup) { $rec.hasGroup = $true }
+        if (-not $rec.code -and $p.code) { $rec.code = $p.code }
       } else {
         $items[$p.id] = [pscustomobject]@{
           id = $p.id; name = $p.name; origin = $p.origin; spec = $p.spec
@@ -199,7 +218,7 @@ foreach ($bk in $buckets) {
           cats = @($catPath)
           img = "$Base/data/product/img_m1_$($p.id)"
           url = "$Base/shop/item.php?pd_idx=$($p.id)"
-          pkg = ''; gid = ''; hasGroup = $p.hasGroup
+          pkg = ''; gid = ''; hasGroup = $p.hasGroup; code = $p.code
         }
       }
     }
@@ -248,6 +267,13 @@ function Parse-GroupRows([string]$html) {
       $t = (Dec ($im.Groups[1].Value -replace '&nbsp;', ' ')).Trim()
       if ($t -and $t -notmatch '^개당' -and $t -notmatch '^-?[\d,]+\s*원?$' -and $t -notmatch '@') { $spec = $t; break }
     }
+    # 이름 끝에 규격이 붙어 있으면 잘라냄 (목록 파서와 동일 규칙)
+    if ($spec) {
+      $spT2 = $spec.Trim()
+      if ($spT2 -and $nm.TrimEnd().EndsWith($spT2)) {
+        $nm = $nm.TrimEnd().Substring(0, $nm.TrimEnd().Length - $spT2.Length).Trim()
+      }
+    }
     $pkg = ''
     if ($reg -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkg = ($Matches[1] -replace '\s+', '') }
     $prices = [regex]::Matches($reg, '\d+@\s*([\d,]+)\s*원') | ForEach-Object { ToInt $_.Groups[1].Value }
@@ -256,7 +282,8 @@ function Parse-GroupRows([string]$html) {
     if ($prices.Count -ge 2) { $pMember = $prices[1] }
 
     $rows.Add([pscustomobject]@{ id = $vid; name = $nm; spec = $spec; pkg = $pkg
-                                 origin = $brand; priceList = $pList; priceMember = $pMember })
+                                 origin = $brand; priceList = $pList; priceMember = $pMember
+                                 code = $anchors[$i].Groups[2].Value })
   }
   , $rows
 }
@@ -295,6 +322,7 @@ if ($Details) {
         $r2.gid = $tid
         if (-not $r2.spec -and $row.spec) { $r2.spec = $row.spec }
         if (-not $r2.pkg -and $row.pkg)   { $r2.pkg = $row.pkg }
+        if (-not $r2.code -and $row.code) { $r2.code = $row.code }
         if ($null -eq $r2.priceList -and $null -ne $row.priceList)     { $r2.priceList = $row.priceList }
         if ($null -eq $r2.priceMember -and $null -ne $row.priceMember) { $r2.priceMember = $row.priceMember }
       } elseif ($row.name) {
@@ -306,7 +334,7 @@ if ($Details) {
           cat1 = $rep.cat1; cat2 = $rep.cat2; catLeaf = $rep.catLeaf; cats = $rep.cats
           img = "$Base/data/product/img_m1_$($row.id)"
           url = "$Base/shop/item.php?pd_idx=$($row.id)"
-          pkg = $row.pkg; gid = $tid
+          pkg = $row.pkg; gid = $tid; hasGroup = $false; code = $row.code
         }
       }
     }
