@@ -28,8 +28,13 @@ function ToInt($s) { if ($s) { [int]((($s) -replace '[^\d]', '')) } else { $null
 # 전체 xcode 목록과 이름을 수집 (커버리지도 모바일이 훨씬 넓음: ~130개 vs 25개)
 $catName = @{}
 $xcodeSet = @{}
-foreach ($src in @("http://m.seilglobal.co.kr/", "$Base/")) {
-  try { $navHtml = Get-Html $src } catch { Write-Warning "메뉴 로드 실패: $src"; continue }
+$uaMobile = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1'
+function Get-HtmlUA([string]$url, [string]$agent) {
+  $r = Invoke-WebRequest -Uri $url -UserAgent $agent -UseBasicParsing -TimeoutSec 40
+  $kr.GetString($r.RawContentStream.ToArray())
+}
+foreach ($src in @(@{u="http://m.seilglobal.co.kr/"; a=$uaMobile}, @{u="$Base/"; a=$ua})) {
+  try { $navHtml = Get-HtmlUA $src.u $src.a } catch { Write-Warning "메뉴 로드 실패: $($src.u)"; continue }
   foreach ($m in [regex]::Matches($navHtml, '(?s)<a[^>]+shopbrand\.html\?xcode=(\d+)[^"]*"[^>]*>(.*?)</a>')) {
     $xc = $m.Groups[1].Value
     $xcodeSet[$xc] = 1
