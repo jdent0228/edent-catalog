@@ -35,7 +35,8 @@ function Get-HtmlUA([string]$url, [string]$agent) {
 }
 foreach ($src in @(@{u="http://m.seilglobal.co.kr/"; a=$uaMobile}, @{u="$Base/"; a=$ua})) {
   try { $navHtml = Get-HtmlUA $src.u $src.a } catch { Write-Warning "메뉴 로드 실패: $($src.u)"; continue }
-  foreach ($m in [regex]::Matches($navHtml, '(?s)<a[^>]+shopbrand\.html\?xcode=(\d+)[^"]*"[^>]*>(.*?)</a>')) {
+  # 데스크톱은 shopbrand.html?xcode=, 모바일은 /m/product_list.html?type=X&xcode= — 경로 무관하게 xcode만 잡음
+  foreach ($m in [regex]::Matches($navHtml, '(?s)<a[^>]+[?&]xcode=(\d+)[^"]*"[^>]*>(.*?)</a>')) {
     $xc = $m.Groups[1].Value
     $xcodeSet[$xc] = 1
     $nm = Dec ((($m.Groups[2].Value -replace '<[^>]+>', '') -replace '\s+', ' ') -replace '\s*>\s*$', '')
