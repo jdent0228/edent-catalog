@@ -109,7 +109,6 @@ function Parse-Products([string]$html) {
   $seen = @{}; $out = [System.Collections.Generic.List[object]]::new()
   foreach ($m in $ms) {
     $pdid = $m.Groups[1].Value
-    if ($seen.ContainsKey($pdid)) { continue }; $seen[$pdid] = 1
     $nm  = Dec $m.Groups[2].Value
     $mid = $m.Groups[3].Value
     $pReal = ToInt $m.Groups[4].Value
@@ -167,6 +166,31 @@ function Parse-Products([string]$html) {
       elseif ($cp.idx -ge $m.Index) { break }
     }
 
+    if ($seen.ContainsKey($pdid)) {
+      # 같은 페이지 중복(추천카드+메인그리드): 필드 병합 — 메인그리드(코드 보유) 데이터 우선
+      $ex = $out[$seen[$pdid]]
+      if ($hasGroup) { $ex.hasGroup = $true }
+      if (-not $ex.code -and $code) {
+        $ex.code = $code
+        if ($nm) { $ex.name = $nm }          # 메인그리드 이름이 정본
+      }
+      if (-not $ex.spec -and $spec) { $ex.spec = $spec }
+      if (-not $ex.company -and $company) { $ex.company = $company }
+      if (-not $ex.country -and $country) { $ex.country = $country }
+      if (-not $ex.pkg -and $pkgL) { $ex.pkg = $pkgL }
+      if ($null -eq $ex.priceList -and $null -ne $pList) { $ex.priceList = $pList }
+      if ($null -eq $ex.priceMember -and $null -ne $pMember) { $ex.priceMember = $pMember }
+      if ($null -eq $ex.priceReal -and $null -ne $pReal) { $ex.priceReal = $pReal }
+      # 병합 후 이름 끝 규격 중복 제거
+      if ($ex.spec) {
+        $spX = $ex.spec.Trim()
+        if ($spX -and $ex.name.TrimEnd().EndsWith($spX) -and $ex.name.TrimEnd().Length -gt $spX.Length) {
+          $ex.name = $ex.name.TrimEnd().Substring(0, $ex.name.TrimEnd().Length - $spX.Length).Trim()
+        }
+      }
+      continue
+    }
+    $seen[$pdid] = $out.Count
     $out.Add([pscustomobject]@{
       id = $pdid; name = $nm; company = $company; country = $country; spec = $spec
       priceList = $pList; priceMember = $pMember; priceReal = $pReal
