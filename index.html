@@ -106,14 +106,56 @@
   .lhead .sortable.on{color:var(--blue);}
   .lhead .sortable.on i{color:var(--blue);}
 
-  /* 그룹 펼치기/접기 행 */
-  .grow{display:flex;align-items:center;justify-content:center;gap:6px;
-    border:1px dashed var(--line-strong);border-radius:9px;background:var(--panel);
-    padding:7px 0;font-size:12px;color:var(--muted-2);cursor:pointer;user-select:none;}
-  .grow:hover{background:#eef1f4;color:var(--text);border-color:var(--blue);}
-  .grow b{color:var(--blue);font-weight:700;}
   .gcount{display:inline-block;font-size:10px;font-weight:700;color:var(--blue);
     background:var(--blue-soft);border-radius:4px;padding:0 5px;margin-left:5px;line-height:16px;vertical-align:1px;}
+
+  /* ===== A. 표형(table): 박스 없이 연속 표, 자식 규격은 들여쓰기 ===== */
+  .viewlist.m-table{gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;}
+  .m-table .grp+.grp{border-top:1px solid var(--line);}
+  .m-table .card{border:0;border-radius:0;background:none;box-shadow:none;padding:7px 0;}
+  .m-table .card:hover{background:var(--hover);box-shadow:none;}
+  .m-table .kids{display:none;background:#fbfcfd;border-top:1px dashed var(--line);}
+  .m-table .grp.open .kids{display:block;}
+  .m-table .kid{padding:5px 0;border-left:3px solid var(--blue-soft);}
+  .m-table .kid+.kid{border-top:1px solid #f1f3f5;}
+  .m-table .kid .c-cat,.m-table .kid .c-comp{visibility:hidden;}
+  .m-table .kid .thumb{width:30px;height:30px;opacity:.75;}
+  .m-table .kid .nm{display:none;}
+  .m-table .kid .c-spec .spec-txt{font-weight:600;color:var(--text);}
+  .caret{display:inline-block;width:15px;font-size:9px;color:var(--muted);transition:transform .15s;}
+  .grp.open .caret{transform:rotate(90deg);color:var(--blue);}
+
+  /* ===== B. 칩형(chips): 한 그룹 = 딱 한 줄, 규격은 칩으로 ===== */
+  .viewlist.m-chips{gap:5px;}
+  .m-chips .card{align-items:stretch;}
+  .m-chips .c-spec{flex:0 0 250px;display:flex;flex-wrap:wrap;gap:3px;align-content:center;justify-content:center;}
+  .specchip{font-size:10.5px;line-height:18px;padding:0 6px;border:1px solid var(--line);border-radius:5px;
+    color:var(--muted-2);background:#fff;cursor:pointer;white-space:nowrap;}
+  .specchip:hover{border-color:var(--blue);color:var(--blue);}
+  .specchip.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;}
+  .specmore{font-size:10.5px;line-height:18px;padding:0 6px;color:var(--muted);cursor:pointer;
+    border:1px dashed var(--line-strong);border-radius:5px;}
+  .specmore:hover{color:var(--blue);border-color:var(--blue);}
+
+  /* ===== C. 아코디언(accordion): 그룹 = 카드 한 장, 내부에 규격 미니표 ===== */
+  .viewlist.m-acc{gap:8px;}
+  .m-acc .grp{border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden;transition:.12s;}
+  .m-acc .grp:hover{border-color:var(--line-strong);box-shadow:0 3px 12px rgba(0,0,0,.05);}
+  .m-acc .grp.open{border-color:var(--blue);box-shadow:0 3px 14px rgba(49,130,246,.10);}
+  .m-acc .card{border:0;border-radius:0;background:none;box-shadow:none;}
+  .m-acc .kids{display:none;padding:0 12px 10px;}
+  .m-acc .grp.open .kids{display:block;}
+  .m-acc .ktable{border-top:1px solid var(--line);}
+  .m-acc .krow{display:flex;align-items:center;gap:10px;padding:6px 4px;font-size:12px;cursor:pointer;}
+  .m-acc .krow+.krow{border-top:1px solid #f1f3f5;}
+  .m-acc .krow:hover{background:var(--hover);}
+  .m-acc .krow .ks{flex:1;min-width:0;color:var(--text);font-weight:600;word-break:keep-all;}
+  .m-acc .krow .kp{flex:0 0 84px;color:var(--muted-2);}
+  .m-acc .krow .kprice{flex:0 0 100px;text-align:right;font-weight:800;color:var(--blue);white-space:nowrap;}
+  .m-acc .krow .kact{flex:0 0 58px;display:flex;justify-content:flex-end;gap:0;}
+
+  /* 그룹 요약(가격 범위/규격 수) */
+  .grange{font-size:10.5px;color:var(--muted);font-weight:500;}
 
   /* 컬럼 폭 (헤더/행 공통) */
   .c-cat{flex:0 0 74px;padding:0 6px;}
@@ -237,9 +279,10 @@
     <div class="search">
       <input id="q" type="search" placeholder="상품명·규격·코드 검색 (초성 가능)" autocomplete="off">
       <select id="groupMode" title="같은 상품의 규격 묶음 표시 방식">
-        <option value="collapse">규격 접기</option>
-        <option value="batch">5개씩 보기</option>
-        <option value="all">전체 나열</option>
+        <option value="table">A · 표형 (펼침)</option>
+        <option value="chips">B · 규격칩 (한 줄)</option>
+        <option value="acc">C · 카드 아코디언</option>
+        <option value="flat">D · 전체 나열</option>
       </select>
       <button class="favbtn" id="favFilter" title="즐겨찾기만 보기">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -456,8 +499,10 @@
 
   // ----- 필터/정렬 -----
   var q='', sortKey='name', sortDir=1;      // dir 1=오름차순, -1=내림차순
-  var groupMode='collapse';                  // collapse | batch | all
+  var groupMode='table';                     // table | chips | acc | flat
   var expanded=new Set();                    // 펼친 그룹 키
+  var itemByKey={};                          // _key → 상품 (칩 클릭 등에서 조회)
+  items.forEach(function(x){itemByKey[x._key]=x;});
   var grid=document.getElementById('grid'), empty=document.getElementById('empty'),
       resultCount=document.getElementById('resultCount'),
       loadmore=document.getElementById('loadmore'),
@@ -527,24 +572,18 @@
     buildDisplay();
   }
 
-  // 그룹 표시 방식에 따라 실제 렌더 목록 구성
+  // 연속된 같은 그룹을 묶음 단위로 구성
   function buildDisplay(){
     display=[];
     var i=0;
     while(i<filtered.length){
       var gk=filtered[i]._gk, j=i;
       while(j<filtered.length && filtered[j]._gk===gk) j++;
-      var members=filtered.slice(i,j), n=members.length;
-      if(n===1 || groupMode==='all' || expanded.has(gk)){
-        members.forEach(function(m){display.push({t:'item',x:m});});
-        if(n>1 && groupMode!=='all') display.push({t:'fold',gk:gk,n:n});
-      } else if(groupMode==='batch'){
-        var show=Math.min(5,n);
-        for(var k=0;k<show;k++) display.push({t:'item',x:members[k]});
-        if(n>show) display.push({t:'more',gk:gk,n:n-show});
-      } else { // collapse
-        display.push({t:'item',x:members[0],gn:n});
-        display.push({t:'more',gk:gk,n:n-1});
+      var members=filtered.slice(i,j);
+      if(groupMode==='flat'){
+        members.forEach(function(m){display.push({gk:m._key,ms:[m]});});
+      } else {
+        display.push({gk:gk,ms:members});
       }
       i=j;
     }
@@ -627,14 +666,103 @@
 
   // ----- 렌더 -----
   var viewMode='list';
-  function entryHTML(e){
-    if(e.t==='item') return viewMode==='list'?rowHTML(e.x,e.gn):cardHTML(e.x);
-    if(e.t==='more') return '<div class="grow" data-exp="'+esc(e.gk)+'">▾ 규격 <b>'+e.n+'</b>개 더 보기</div>';
-    return '<div class="grow" data-fold="'+esc(e.gk)+'">▴ 규격 '+e.n+'개 접기</div>';
+  function priceRange(ms){
+    var vals=ms.map(priceKey).filter(function(v){return isFinite(v);});
+    if(!vals.length) return '<div class="p-none">가격 문의</div>';
+    var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+    var isMem=ms.some(function(m){return m.priceMember!=null&&m.priceMember>0;});
+    return '<div class="p-mem">'+(isMem?'<small>회원</small>':'')+won(mn)+'</div>'+
+      (mx>mn?'<div class="grange">~ '+won(mx)+'</div>':'');
+  }
+  // A. 표형: 대표 행 + (펼치면) 들여쓴 규격 행들
+  function grpTableHTML(g){
+    var ms=g.ms, lead=ms[0], n=ms.length;
+    if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
+    var head='<div class="card lead" data-toggle="1">'+
+      '<div class="c-cat">'+esc(lead.cat1||'')+
+        '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-img">'+thumbHTML(lead)+'</div>'+
+      '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
+        (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
+      '<div class="c-main"><div class="nm"><span class="caret">▶</span>'+hl(lead.name)+
+        '<span class="gcount">규격 '+n+'</span></div></div>'+
+      '<div class="c-spec"><div class="spec-txt">'+n+'종</div></div>'+
+      '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
+      '<div class="c-price">'+priceRange(ms)+'</div>'+
+      '<div class="c-act"></div></div>';
+    var kids=ms.map(function(m){
+      return '<div class="card kid" data-url="'+esc(m.url)+'">'+
+        '<div class="c-cat"></div>'+
+        '<div class="c-img">'+thumbHTML(m)+'</div>'+
+        '<div class="c-comp"></div>'+
+        '<div class="c-main"><div class="nm"></div></div>'+
+        '<div class="c-spec"><div class="spec-txt">'+(m.spec?hl(m.spec):'-')+'</div></div>'+
+        '<div class="c-pkg"><div class="pkg-txt">'+esc(m.pkg||'-')+'</div></div>'+
+        '<div class="c-price">'+priceHTML(m)+'</div>'+
+        '<div class="c-act">'+actHTML(m)+favBtnHTML(m)+'</div></div>';
+    }).join('');
+    return '<div class="grp'+(expanded.has(g.gk)?' open':'')+'" data-gk="'+esc(g.gk)+'">'+
+      head+'<div class="kids">'+kids+'</div></div>';
+  }
+  // B. 칩형: 그룹당 한 줄, 규격은 칩 — 칩 클릭 시 가격/포장/링크가 그 규격으로 바뀜
+  function grpChipsHTML(g){
+    var ms=g.ms, lead=ms[0], n=ms.length;
+    if(n===1) return rowHTML(lead);
+    var LIM=6;
+    var chips=ms.map(function(m,i){
+      return '<span class="specchip'+(i===0?' on':'')+(i>=LIM?' hid" style="display:none':'')+
+        '" data-k="'+esc(m._key)+'">'+(m.spec?hl(m.spec):'기본')+'</span>';
+    }).join('');
+    if(n>LIM) chips+='<span class="specmore">+'+(n-LIM)+'</span>';
+    return '<div class="card" data-url="'+esc(lead.url)+'">'+
+      '<div class="c-cat">'+esc(lead.cat1||'')+
+        '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-img">'+thumbHTML(lead)+'</div>'+
+      '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
+        (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
+      '<div class="c-main"><div class="nm">'+hl(lead.name)+'<span class="gcount">규격 '+n+'</span></div></div>'+
+      '<div class="c-spec">'+chips+'</div>'+
+      '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
+      '<div class="c-price">'+priceHTML(lead)+'</div>'+
+      '<div class="c-act">'+actHTML(lead)+favBtnHTML(lead)+'</div></div>';
+  }
+  // C. 카드 아코디언: 그룹=카드, 펼치면 카드 안에 규격 미니표
+  function grpAccHTML(g){
+    var ms=g.ms, lead=ms[0], n=ms.length;
+    if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
+    var head='<div class="card lead" data-toggle="1">'+
+      '<div class="c-cat">'+esc(lead.cat1||'')+
+        '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-img">'+thumbHTML(lead)+'</div>'+
+      '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
+        (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
+      '<div class="c-main"><div class="nm"><span class="caret">▶</span>'+hl(lead.name)+
+        '<span class="gcount">규격 '+n+'</span></div></div>'+
+      '<div class="c-spec"><div class="spec-txt">'+n+'종</div></div>'+
+      '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
+      '<div class="c-price">'+priceRange(ms)+'</div>'+
+      '<div class="c-act"></div></div>';
+    var rows=ms.map(function(m){
+      return '<div class="krow" data-url="'+esc(m.url)+'">'+
+        '<span class="ks">'+(m.spec?hl(m.spec):'기본')+'</span>'+
+        '<span class="kp">'+esc(m.pkg||'')+'</span>'+
+        '<span class="kprice">'+(mainPrice(m)!=null?won(mainPrice(m)):'문의')+'</span>'+
+        '<span class="kact">'+actHTML(m)+favBtnHTML(m)+'</span></div>';
+    }).join('');
+    return '<div class="grp'+(expanded.has(g.gk)?' open':'')+'" data-gk="'+esc(g.gk)+'">'+
+      head+'<div class="kids"><div class="ktable">'+rows+'</div></div></div>';
+  }
+  function groupHTML(g){
+    if(viewMode!=='list') return g.ms.map(cardHTML).join('');
+    if(groupMode==='table') return grpTableHTML(g);
+    if(groupMode==='chips') return grpChipsHTML(g);
+    if(groupMode==='acc')   return grpAccHTML(g);
+    return g.ms.map(function(m){return rowHTML(m);}).join('');
   }
   function renderMore(){
-    var next=display.slice(shown, shown+PAGE);
-    grid.insertAdjacentHTML('beforeend', next.map(entryHTML).join(''));
+    var step=(groupMode==='flat')?PAGE:40;
+    var next=display.slice(shown, shown+step);
+    grid.insertAdjacentHTML('beforeend', next.map(groupHTML).join(''));
     shown+=next.length;
     loadmore.style.display=(shown<display.length)?'block':'none';
   }
@@ -653,12 +781,40 @@
 
   // ----- 클릭 위임 (사진확대/코드복사/공유/하트 → 그 외는 상세페이지 새탭) -----
   document.addEventListener('click',function(e){
-    var expEl=e.target.closest('[data-exp]');
-    if(expEl){ expanded.add(expEl.dataset.exp); buildDisplay();
-      grid.innerHTML=''; shown=0; renderMore(); return; }
-    var foldEl=e.target.closest('[data-fold]');
-    if(foldEl){ expanded.delete(foldEl.dataset.fold); buildDisplay();
-      grid.innerHTML=''; shown=0; renderMore(); return; }
+    // 규격칩(B): 선택한 규격으로 가격/포장/링크 전환
+    var chip=e.target.closest('.specchip');
+    if(chip){
+      var row=chip.closest('.card'), m=itemByKey[chip.dataset.k];
+      if(row&&m){
+        Array.prototype.forEach.call(row.querySelectorAll('.specchip'),function(c){c.classList.remove('on');});
+        chip.classList.add('on');
+        row.dataset.url=m.url;
+        row.querySelector('.c-price').innerHTML=priceHTML(m);
+        row.querySelector('.c-pkg .pkg-txt').textContent=m.pkg||'-';
+        row.querySelector('.c-act').innerHTML=actHTML(m)+favBtnHTML(m);
+      }
+      return;
+    }
+    var smore=e.target.closest('.specmore');
+    if(smore){
+      var cell=smore.closest('.c-spec');
+      Array.prototype.forEach.call(cell.querySelectorAll('.specchip.hid'),function(c){c.style.display='';});
+      smore.remove(); return;
+    }
+    // 그룹 펼침/접기 (A·C)
+    var tg=e.target.closest('[data-toggle]');
+    if(tg && !e.target.closest('.act-img') && !e.target.closest('.iconbtn')){
+      var grp=tg.closest('.grp');
+      if(grp){
+        grp.classList.toggle('open');
+        if(grp.classList.contains('open')) expanded.add(grp.dataset.gk);
+        else expanded.delete(grp.dataset.gk);
+      }
+      return;
+    }
+    // 아코디언 내부 규격 행 → 해당 상세 새탭
+    var kr=e.target.closest('.krow');
+    if(kr && !e.target.closest('.iconbtn')){ window.open(kr.dataset.url,'_blank','noopener'); return; }
     var imgEl=e.target.closest('.act-img');
     if(imgEl){
       imgModalPic.onerror=function(){ this.onerror=null; this.src=imgEl.dataset.fallback; };
@@ -695,13 +851,25 @@
   var qEl=document.getElementById('q'), t=null;
   qEl.addEventListener('input',function(){q=qEl.value;if(t)clearTimeout(t);t=setTimeout(apply,160);});
   // 그룹 표시 방식
+  function setGroupMode(v){
+    groupMode=v;
+    grid.classList.remove('m-table','m-chips','m-acc');
+    if(v==='table') grid.classList.add('m-table');
+    else if(v==='chips') grid.classList.add('m-chips');
+    else if(v==='acc') grid.classList.add('m-acc');
+  }
   document.getElementById('groupMode').addEventListener('change',function(e){
-    groupMode=e.target.value; expanded.clear();
+    setGroupMode(e.target.value); expanded.clear();
     try{localStorage.setItem('edent_gmode',groupMode);}catch(err){}
     apply();
   });
-  try{ var gm=localStorage.getItem('edent_gmode');
-    if(gm){ groupMode=gm; document.getElementById('groupMode').value=gm; } }catch(err){}
+  (function(){
+    var gm='table';
+    try{ gm=localStorage.getItem('edent_gmode')||'table'; }catch(err){}
+    if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='table';
+    document.getElementById('groupMode').value=gm;
+    setGroupMode(gm);
+  })();
 
   // 머릿행 클릭 정렬 (같은 열 재클릭 → 오름/내림 전환)
   function markSort(){
