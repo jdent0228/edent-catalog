@@ -114,10 +114,20 @@ function Parse-Products([string]$html) {
     $mid = $m.Groups[3].Value
     $pReal = ToInt $m.Groups[4].Value
 
-    # 원산지/브랜드: 이름 뒤 "[브랜드]" 또는 skyblue 뱃지
-    $origin = ''
-    if ($mid -match '^\s*<br>\s*\[([^\]]+)\]') { $origin = Dec $Matches[1] }
-    elseif ($mid -match 'class="skyblue">([^<]+)<') { $origin = Dec $Matches[1] }
+    # 회사/제조국 분리:
+    #  - 메인그리드: 이름 뒤 "<br>[회사]"
+    #  - 추천카드: skyblue 뱃지 (회사명 또는 '국산' 같은 제조국이 섞여 들어옴 → 국가명이면 country로)
+    $company = ''; $country = ''
+    $COUNTRY_RX = '^(국산|수입|한국|중국|일본|독일|미국|스위스|프랑스|영국|대만|파키스탄|이태리|이탈리아|이스라엘|인도|브라질|캐나다|스웨덴|덴마크|핀란드|호주|러시아|스페인|폴란드|체코|터키|베트남|태국)$'
+    if ($mid -match '^\s*<br>\s*\[([^\]]+)\]') { $company = Dec $Matches[1] }
+    elseif ($mid -match 'class="skyblue">([^<]+)<') {
+      $b = Dec $Matches[1]
+      if ($b -match $COUNTRY_RX) { $country = $b } else { $company = $b }
+    }
+
+    # 포장단위 (메인그리드: "5ea/pkg")
+    $pkgL = ''
+    if ($mid -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkgL = ($Matches[1] -replace '\s+', '') }
 
     # 규격: 이름~가격 사이 텍스트형 <span class="impact">규격</span>.
     # 즉시할인금액(Z_icon 뒤 "-0원" 등)을 규격으로 오인하지 않도록 Z_icon 이전 구간만 검색.
@@ -158,9 +168,9 @@ function Parse-Products([string]$html) {
     }
 
     $out.Add([pscustomobject]@{
-      id = $pdid; name = $nm; origin = $origin; spec = $spec
+      id = $pdid; name = $nm; company = $company; country = $country; spec = $spec
       priceList = $pList; priceMember = $pMember; priceReal = $pReal
-      hasGroup = $hasGroup; code = $code
+      hasGroup = $hasGroup; code = $code; pkg = $pkgL
     })
   }
   , $out
@@ -205,20 +215,22 @@ foreach ($bk in $buckets) {
         if ($null -eq $rec.priceList)   { $rec.priceList = $p.priceList }
         if ($null -eq $rec.priceMember) { $rec.priceMember = $p.priceMember }
         if ($null -eq $rec.priceReal)   { $rec.priceReal = $p.priceReal }
-        if (-not $rec.origin) { $rec.origin = $p.origin }
+        if (-not $rec.company) { $rec.company = $p.company }
+        if (-not $rec.country) { $rec.country = $p.country }
         if (-not $rec.spec) { $rec.spec = $p.spec }
+        if (-not $rec.pkg -and $p.pkg) { $rec.pkg = $p.pkg }
         if ($p.hasGroup) { $rec.hasGroup = $true }
         if (-not $rec.code -and $p.code) { $rec.code = $p.code }
       } else {
         $items[$p.id] = [pscustomobject]@{
-          id = $p.id; name = $p.name; origin = $p.origin; spec = $p.spec
+          id = $p.id; name = $p.name; company = $p.company; country = $p.country; spec = $p.spec
           priceList = $p.priceList; priceMember = $p.priceMember; priceReal = $p.priceReal
           cat1 = $bk.c1n; cat2 = $bk.c2n
           catLeaf = $(if ($bk.depth -eq 3) { $catPath } else { '' })
           cats = @($catPath)
           img = "$Base/data/product/img_m1_$($p.id)"
           url = "$Base/shop/item.php?pd_idx=$($p.id)"
-          pkg = ''; gid = ''; hasGroup = $p.hasGroup; code = $p.code
+          pkg = $p.pkg; gid = ''; hasGroup = $p.hasGroup; code = $p.code
         }
       }
     }
@@ -229,17 +241,29 @@ foreach ($bk in $buckets) {
 }
 
 # ================= 4.5 이전 데이터 승계 =================
-# gid/pkg 승계 + 목록에 안 나오는 변형상품(그룹에서 발견된 형제) 유지
+# 목록에 안 나오는 변형상품(그룹 형제) 유지 — 현재 스키마로 정규화해 재추가.
+# (가격/이름/규격은 이번 실행의 그룹 재조회에서 다시 갱신됨)
+function OldProp($o, [string]$n) {
+  if ($o.PSObject.Properties[$n]) { $o.$n } else { $null }
+}
 foreach ($oid in $old.Keys) {
   $o = $old[$oid]
-  if ($items.ContainsKey($oid)) {
-    $rec = $items[$oid]
-    if ($o.PSObject.Properties['gid'] -and $o.gid) { $rec.gid = $o.gid }
-    if ($o.PSObject.Properties['pkg'] -and $o.pkg -and -not $rec.pkg) { $rec.pkg = $o.pkg }
-    if (-not $rec.spec -and $o.spec) { $rec.spec = $o.spec }
-  } elseif ($o.PSObject.Properties['gid'] -and $o.gid -and $o.gid -ne $oid) {
-    # 목록 미노출 변형상품 → 유지 (가격은 대표상품 상세 재방문 시 갱신)
-    $items[$oid] = $o
+  if ($items.ContainsKey($oid)) { continue }
+  $og = OldProp $o 'gid'
+  if ($og -and $og -ne 'solo' -and $og -ne $oid) {
+    $items[$oid] = [pscustomobject]@{
+      id = $oid; name = [string](OldProp $o 'name')
+      company = [string]$(if (OldProp $o 'company') { OldProp $o 'company' } else { OldProp $o 'origin' })
+      country = [string](OldProp $o 'country')
+      spec = [string](OldProp $o 'spec')
+      priceList = (OldProp $o 'priceList'); priceMember = (OldProp $o 'priceMember'); priceReal = (OldProp $o 'priceReal')
+      cat1 = [string](OldProp $o 'cat1'); cat2 = [string](OldProp $o 'cat2')
+      catLeaf = [string](OldProp $o 'catLeaf'); cats = @(OldProp $o 'cats')
+      img = "$Base/data/product/img_m1_$oid"
+      url = "$Base/shop/item.php?pd_idx=$oid"
+      pkg = [string](OldProp $o 'pkg'); gid = [string]$og; hasGroup = $false
+      code = [string](OldProp $o 'code')
+    }
   }
 }
 
@@ -260,8 +284,9 @@ function Parse-GroupRows([string]$html) {
       $t = (Dec $nmM.Groups[1].Value)
       if ($t -notmatch '^\d{2,6}-\d{2,6}$') { $nm = $t; break }
     }
+    # 회사: 이름 링크 직후 "<br>...[회사]" 만 인정 (이름 안의 [가격파괴] 같은 태그 오인 방지)
     $brand = ''
-    if ($reg -match '\[([^\]]+)\]') { $brand = Dec $Matches[1] }
+    if ($reg -match '</a>\s*<br>\s*(?:<span[^>]*>)?\s*\[([^\]]+)\]') { $brand = Dec $Matches[1] }
     $spec = ''
     foreach ($im in [regex]::Matches($reg, '<span class="impact">\s*([^<]+?)\s*</span>')) {
       $t = (Dec ($im.Groups[1].Value -replace '&nbsp;', ' ')).Trim()
@@ -282,7 +307,7 @@ function Parse-GroupRows([string]$html) {
     if ($prices.Count -ge 2) { $pMember = $prices[1] }
 
     $rows.Add([pscustomobject]@{ id = $vid; name = $nm; spec = $spec; pkg = $pkg
-                                 origin = $brand; priceList = $pList; priceMember = $pMember
+                                 company = $brand; priceList = $pList; priceMember = $pMember
                                  code = $anchors[$i].Groups[2].Value })
   }
   , $rows
@@ -320,13 +345,16 @@ if ($Details) {
       if ($items.ContainsKey($row.id)) {
         $r2 = $items[$row.id]
         $r2.gid = $tid
-        if (-not $r2.spec -and $row.spec) { $r2.spec = $row.spec }
-        if (-not $r2.pkg -and $row.pkg)   { $r2.pkg = $row.pkg }
-        if (-not $r2.code -and $row.code) { $r2.code = $row.code }
-        # 그룹에서 규격이 채워진 뒤, 목록 이름 끝에 붙은 규격 중복 제거
+        # 그룹 행이 정본: 이름(그룹 내 동일)·규격·회사는 그룹 값으로 덮어씀
+        if ($row.name) { $r2.name = $row.name }
+        if ($row.spec) { $r2.spec = $row.spec }
+        if ($row.company) { $r2.company = $row.company }
+        if ($row.pkg)  { $r2.pkg = $row.pkg }
+        if ($row.code) { $r2.code = $row.code }
+        # 안전망: 이름 끝에 규격이 남아있으면 제거
         if ($r2.spec) {
           $spT3 = $r2.spec.Trim()
-          if ($spT3 -and $r2.name.TrimEnd().EndsWith($spT3)) {
+          if ($spT3 -and $r2.name.TrimEnd().EndsWith($spT3) -and $r2.name.TrimEnd().Length -gt $spT3.Length) {
             $r2.name = $r2.name.TrimEnd().Substring(0, $r2.name.TrimEnd().Length - $spT3.Length).Trim()
           }
         }
@@ -335,7 +363,9 @@ if ($Details) {
       } elseif ($row.name) {
         $newVar++
         $items[$row.id] = [pscustomobject]@{
-          id = $row.id; name = $row.name; origin = $(if ($row.origin) { $row.origin } else { $rep.origin })
+          id = $row.id; name = $row.name
+          company = $(if ($row.company) { $row.company } else { $rep.company })
+          country = ''
           spec = $row.spec
           priceList = $row.priceList; priceMember = $row.priceMember; priceReal = $null
           cat1 = $rep.cat1; cat2 = $rep.cat2; catLeaf = $rep.catLeaf; cats = $rep.cats
@@ -349,6 +379,57 @@ if ($Details) {
     if ($dv % 100 -eq 0) { Write-Host "  그룹조회 진행 $dv/$($targets.Count) (신규 변형 $newVar)" }
   }
   Write-Host "그룹 크롤 완료: 요청 $($dv)회 · 신규 변형상품 $($newVar)개"
+
+  # ================= 4.7 회사 → 제조국 맵 =================
+  # 제조국은 상세페이지("회사/원산지 : 회사/국가")에만 있음.
+  # 회사별로 1회만 상세를 조회해 국가를 알아내고 company-map.json에 캐시 → 이후 실행은 신규 회사만 조회.
+  $mapFile = Join-Path $PSScriptRoot 'company-map.json'
+  $cmap = @{}
+  if (Test-Path $mapFile) {
+    try {
+      $mj = Get-Content $mapFile -Raw -Encoding UTF8 | ConvertFrom-Json
+      foreach ($pr in $mj.PSObject.Properties) { $cmap[$pr.Name] = $pr.Value }
+    } catch {}
+  }
+  # 회사별 샘플 상품 선정
+  $needCompanies = @{}
+  foreach ($it in $items.Values) {
+    if ($it.company -and -not $cmap.ContainsKey($it.company) -and -not $needCompanies.ContainsKey($it.company)) {
+      $needCompanies[$it.company] = $it.id
+    }
+  }
+  Write-Host "제조국 조회 대상 회사: $($needCompanies.Count)곳 (캐시 $($cmap.Count)곳)"
+  $cv = 0
+  foreach ($cName in @($needCompanies.Keys)) {
+    $sid = $needCompanies[$cName]
+    try { $ch = Get-Html "$Base/shop/item.php?pd_idx=$sid" } catch { continue }
+    $cv++
+    # 형식: "회사/국가[회사검색]" — 회사명에 '/'가 올 수 있고 국가는 빈 값 가능 → 마지막 '/' 기준 분리
+    $cm = [regex]::Match($ch, '회사/원산지[\s\S]{0,220}?mf_idx=(\d+)">(.*)/([^/<\[]*)\[')
+    if ($cm.Success) {
+      $cmap[$cName] = [pscustomobject]@{
+        country = (Dec $cm.Groups[3].Value)
+        mf      = $cm.Groups[1].Value
+        label   = (Dec $cm.Groups[2].Value)
+      }
+    } else {
+      $cmap[$cName] = [pscustomobject]@{ country = ''; mf = ''; label = '' }   # 실패도 캐시(재시도 방지)
+    }
+    if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
+    if ($cv % 50 -eq 0) { Write-Host "  제조국 조회 $cv/$($needCompanies.Count)" }
+  }
+  # 국가 배정 (뱃지로 이미 채워진 country는 유지)
+  foreach ($it in $items.Values) {
+    if (-not $it.country -and $it.company -and $cmap.ContainsKey($it.company)) {
+      $it.country = [string]$cmap[$it.company].country
+    }
+  }
+  # 캐시 저장
+  $cmapOut = [ordered]@{}
+  foreach ($k in ($cmap.Keys | Sort-Object)) { $cmapOut[$k] = $cmap[$k] }
+  $encM = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($mapFile, ($cmapOut | ConvertTo-Json -Depth 3), $encM)
+  Write-Host "제조국 맵 저장: 회사 $($cmap.Count)곳 (신규 조회 $($cv)회)"
 }
 
 # ================= 5. 출력 =================

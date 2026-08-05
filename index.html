@@ -65,7 +65,7 @@
     background:var(--line-strong);transition:.12s;}
   .chip i{color:#c8ced6;font-style:normal;font-size:10.5px;flex:0 0 auto;margin-left:auto;}
   .chip:hover{background:#fff;}
-  .chip.on{background:#fff;border-color:var(--line);color:var(--text);font-weight:600;}
+  .chip.on{background:#fff;border-color:var(--line);color:var(--text);}
   .chip.on::before{background:var(--blue);}
   .chip.on i{color:var(--muted);}
   .cat-tools{display:flex;gap:6px;align-items:center;}
@@ -103,13 +103,13 @@
 
   /* 컬럼 폭 (헤더/행 공통) */
   .c-cat{flex:0 0 74px;padding:0 6px;}
+  .c-comp{flex:0 0 92px;padding:0 6px;}
   .c-img{flex:0 0 56px;}
-  .c-main{flex:1 1 auto;min-width:200px;padding:0 10px;}
-  .c-spec{flex:0 0 150px;padding:0 8px;}
-  .c-pkg{flex:0 0 78px;padding:0 6px;}
-  .c-price{flex:0 0 122px;padding:0 8px;}
-  .c-act{flex:0 0 70px;}
-  .c-fav{flex:0 0 42px;}
+  .c-main{flex:1 1 auto;min-width:190px;padding:0 10px;text-align:center;}
+  .c-spec{flex:0 0 148px;padding:0 8px;}
+  .c-pkg{flex:0 0 76px;padding:0 6px;}
+  .c-price{flex:0 0 120px;padding:0 8px;}
+  .c-act{flex:0 0 62px;}
 
   /* 공통 요소 */
   .thumb{position:relative;background:var(--panel);overflow:hidden;
@@ -140,22 +140,31 @@
   .favheart.on svg{fill:var(--pink);}
 
   /* 목록형 행 */
-  .grid.viewlist{display:flex;flex-direction:column;gap:6px;min-width:920px;}
+  .grid.viewlist{display:flex;flex-direction:column;gap:6px;min-width:940px;}
   .viewlist .card{border:1px solid var(--line);border-radius:9px;background:#fff;
-    display:flex;flex-direction:row;align-items:center;transition:.12s;padding:6px 0;}
+    display:flex;flex-direction:row;align-items:center;transition:.12s;padding:6px 0;cursor:pointer;}
   .viewlist .card:hover{border-color:var(--line-strong);box-shadow:0 3px 12px rgba(0,0,0,.05);}
-  .viewlist .thumb{width:46px;height:46px;border-radius:6px;margin:0 auto;}
+  .viewlist .thumb{width:46px;height:46px;border-radius:6px;margin:0 auto;cursor:zoom-in;}
   .viewlist .c-cat{font-size:11px;color:var(--muted);word-break:keep-all;line-height:1.3;text-align:center;}
+  .viewlist .c-comp{text-align:center;}
+  .comp-txt{font-size:12px;color:var(--muted-2);word-break:keep-all;line-height:1.3;}
+  .comp-ct{font-size:10.5px;color:var(--muted);margin-top:1px;}
   .viewlist .c-price{display:flex;flex-direction:column;align-items:flex-end;gap:0;text-align:right;}
-  .viewlist .c-act{display:flex;align-items:center;justify-content:center;gap:2px;}
-  .viewlist .c-fav{display:flex;align-items:center;justify-content:center;}
+  .viewlist .c-act{display:flex;align-items:center;justify-content:center;gap:0;}
+
+  /* 이미지 확대 모달 */
+  #imgModal{position:fixed;inset:0;background:rgba(17,20,24,.62);display:none;
+    align-items:center;justify-content:center;z-index:90;cursor:zoom-out;padding:28px;}
+  #imgModal.show{display:flex;}
+  #imgModal img{max-width:min(92vw,780px);max-height:86vh;background:#fff;border-radius:14px;
+    object-fit:contain;box-shadow:0 18px 60px rgba(0,0,0,.35);}
 
   /* 앨범형 */
   .grid.viewgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:13px;min-width:0;}
   .viewgrid .card{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden;
-    display:flex;flex-direction:column;transition:.12s;}
+    display:flex;flex-direction:column;transition:.12s;cursor:pointer;}
   .viewgrid .card:hover{border-color:var(--line-strong);box-shadow:0 4px 16px rgba(0,0,0,.06);}
-  .viewgrid .thumb{width:100%;aspect-ratio:1/1;}
+  .viewgrid .thumb{width:100%;aspect-ratio:1/1;cursor:zoom-in;}
   .viewgrid .gfav{position:absolute;top:7px;right:7px;background:rgba(255,255,255,.85);border-radius:50%;
     width:30px;height:30px;}
   .viewgrid .info{padding:9px 11px 11px;display:flex;flex-direction:column;gap:5px;flex:1;}
@@ -236,13 +245,13 @@
   <div class="table-zone">
     <div class="lhead" id="listHead">
       <div class="c-cat">카테고리</div>
+      <div class="c-comp">회사</div>
       <div class="c-img">사진</div>
-      <div class="c-main" style="text-align:left;">상품명 / 코드</div>
+      <div class="c-main">상품명 / 코드</div>
       <div class="c-spec">규격</div>
       <div class="c-pkg">포장</div>
       <div class="c-price">가격</div>
-      <div class="c-act">링크</div>
-      <div class="c-fav">♥</div>
+      <div class="c-act">공유·♥</div>
     </div>
     <div class="grid viewlist" id="grid"></div>
   </div>
@@ -254,6 +263,7 @@
   </div><!-- /.layout -->
 </div>
 <div id="toast"></div>
+<div id="imgModal"><img id="imgModalPic" alt=""></div>
 
 <script src="data.js"></script>
 <script>
@@ -296,6 +306,9 @@
     if(c>=0xAC00&&c<=0xD7A3)o+=CHO[Math.floor((c-0xAC00)/588)];else o+=s[i];}return o;}
   function norm(s){return(s||'').toLowerCase().replace(/\s+/g,'');}
   items.forEach(function(x){
+    // 필드 정규화 (과거 스키마 origin → company)
+    x.company=x.company||x.origin||'';
+    x.country=x.country||'';
     // 상품명 끝에 규격이 중복으로 붙어 있으면 잘라냄 (목록 원본이 이름+규격 결합 형태)
     if(x.spec && x.name){
       var sp=x.spec.trim(), nmT=x.name.replace(/\s+$/,'');
@@ -303,7 +316,9 @@
         x.name=nmT.slice(0,nmT.length-sp.length).replace(/\s+$/,'');
       }
     }
-    var t=(x.name||'')+' '+(x.spec||'')+' '+(x.origin||'')+' '+(x.code||'');
+    // 그룹 키 (동일 그룹 연속 표시용)
+    x._gk=(x.gid && x.gid!=='solo')?String(x.gid):'s'+x.id;
+    var t=(x.name||'')+' '+(x.spec||'')+' '+(x.company||'')+' '+(x.country||'')+' '+(x.code||'');
     x._sn=norm(t);
     x._sc=toCho(x._sn);
   });
@@ -369,6 +384,14 @@
   }
   function priceKey(x){var p=mainPrice(x);return p==null?Infinity:p;}
 
+  // 그룹 최저가 (그룹 연속 정렬용 대표값)
+  var gmin={};
+  items.forEach(function(x){var p=priceKey(x);
+    if(!(x._gk in gmin)||p<gmin[x._gk]) gmin[x._gk]=p;});
+  function specCmp(a,b){return (a.spec||'').localeCompare(b.spec||'','ko',{numeric:true});}
+  function gkCmp(a,b){return a._gk<b._gk?-1:(a._gk>b._gk?1:0);}
+  function gminCmp(a,b){var x=gmin[a._gk],y=gmin[b._gk];return x===y?0:(x<y?-1:1);}
+
   function compute(){
     var tokens=q.trim().toLowerCase().split(/\s+/).filter(Boolean).map(function(t){return t.replace(/\s+/g,'');});
     filtered=items.filter(function(x){
@@ -380,9 +403,16 @@
       }
       return true;
     });
-    if(sortMode==='name') filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','ko');});
-    else if(sortMode==='pl_asc') filtered.sort(function(a,b){return priceKey(a)-priceKey(b);});
-    else if(sortMode==='pl_desc') filtered.sort(function(a,b){return priceKey(b)-priceKey(a);});
+    // 동일 그룹은 항상 연속 배치: (정렬키 → 그룹 → 규격) 순 비교
+    if(sortMode==='name') filtered.sort(function(a,b){
+      var n=(a.name||'').localeCompare(b.name||'','ko'); if(n)return n;
+      var g=gkCmp(a,b); if(g)return g; return specCmp(a,b);});
+    else if(sortMode==='pl_asc') filtered.sort(function(a,b){
+      var d=gminCmp(a,b); if(d)return d;
+      var g=gkCmp(a,b); if(g)return g; return specCmp(a,b);});
+    else if(sortMode==='pl_desc') filtered.sort(function(a,b){
+      var d=gminCmp(b,a); if(d)return d;
+      var g=gkCmp(a,b); if(g)return g; return specCmp(a,b);});
     resultCount.textContent=filtered.length;
   }
 
@@ -391,8 +421,9 @@
   var SVG_SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
   var SVG_HEART='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
 
+  function bigImg(x){return 'https://www.edent.co.kr/data/product/img_b1_'+x.id;}
   function thumbHTML(x){
-    return '<div class="thumb">'+
+    return '<div class="thumb act-img" data-big="'+esc(bigImg(x))+'" data-fallback="'+esc(x.img)+'" title="사진 크게 보기">'+
       '<img loading="lazy" src="'+esc(x.img)+'" alt="" '+
         'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
       '<span class="noimg" style="display:none">이미지<br>없음</span></div>';
@@ -407,8 +438,7 @@
     return out;
   }
   function actHTML(x){
-    return '<a class="iconbtn" href="'+esc(x.url)+'" target="_blank" rel="noopener" title="이덴트 상품페이지 열기">'+SVG_OPEN+'</a>'+
-      '<button class="iconbtn act-share" data-url="'+esc(x.url)+'" title="링크 복사(공유)">'+SVG_SHARE+'</button>';
+    return '<button class="iconbtn act-share" data-url="'+esc(x.url)+'" title="링크 복사(공유)">'+SVG_SHARE+'</button>';
   }
   function favBtnHTML(x,extra){
     var on=favs.has(String(x.id));
@@ -420,17 +450,22 @@
   }
 
   // ----- 목록형 행 -----
+  function compLabel(x){
+    var s=x.company||'';
+    if(x.country) s+=(s?' · ':'')+x.country;
+    return s;
+  }
   function rowHTML(x){
-    return '<div class="card">'+
+    return '<div class="card" data-url="'+esc(x.url)+'">'+
       '<div class="c-cat">'+esc(x.cat1||'')+'</div>'+
+      '<div class="c-comp"><div class="comp-txt">'+esc(x.company||'-')+'</div>'+
+        (x.country?'<div class="comp-ct">'+esc(x.country)+'</div>':'')+'</div>'+
       '<div class="c-img">'+thumbHTML(x)+'</div>'+
-      '<div class="c-main"><div class="nm">'+esc(x.name)+
-        (x.origin?'<span class="brand">'+esc(x.origin)+'</span>':'')+'</div>'+codeHTML(x)+'</div>'+
+      '<div class="c-main"><div class="nm">'+esc(x.name)+'</div>'+codeHTML(x)+'</div>'+
       '<div class="c-spec"><div class="spec-txt">'+esc(x.spec||'-')+'</div></div>'+
       '<div class="c-pkg"><div class="pkg-txt">'+esc(x.pkg||'-')+'</div></div>'+
       '<div class="c-price">'+priceHTML(x)+'</div>'+
-      '<div class="c-act">'+actHTML(x)+'</div>'+
-      '<div class="c-fav">'+favBtnHTML(x)+'</div>'+
+      '<div class="c-act">'+actHTML(x)+favBtnHTML(x)+'</div>'+
     '</div>';
   }
 
@@ -439,8 +474,9 @@
     var subParts=[];
     if(x.spec) subParts.push(esc(x.spec));
     if(x.pkg) subParts.push(esc(x.pkg));
-    if(x.origin) subParts.push('<b>'+esc(x.origin)+'</b>');
-    return '<div class="card">'+
+    var cl=compLabel(x);
+    if(cl) subParts.push('<b>'+esc(cl)+'</b>');
+    return '<div class="card" data-url="'+esc(x.url)+'">'+
       '<div class="thumb">'+
         '<img loading="lazy" src="'+esc(x.img)+'" alt="" '+
           'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
@@ -473,8 +509,20 @@
     renderMore();
   }
 
-  // ----- 클릭 위임 (코드복사/공유/하트) -----
+  // ----- 이미지 확대 모달 -----
+  var imgModal=document.getElementById('imgModal'), imgModalPic=document.getElementById('imgModalPic');
+  imgModal.addEventListener('click',function(){imgModal.classList.remove('show');imgModalPic.src='';});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')imgModal.classList.remove('show');});
+
+  // ----- 클릭 위임 (사진확대/코드복사/공유/하트 → 그 외는 상세페이지 새탭) -----
   document.addEventListener('click',function(e){
+    var imgEl=e.target.closest('.act-img');
+    if(imgEl){
+      imgModalPic.onerror=function(){ this.onerror=null; this.src=imgEl.dataset.fallback; };
+      imgModalPic.src=imgEl.dataset.big;
+      imgModal.classList.add('show');
+      return;
+    }
     var codeEl=e.target.closest('.act-code');
     if(codeEl){ copyText(codeEl.dataset.code,'상품코드 복사됨: '+codeEl.dataset.code); return; }
     var shareEl=e.target.closest('.act-share');
@@ -488,6 +536,9 @@
       if(favOnly) apply();
       return;
     }
+    // 나머지 행 영역 클릭 → 이덴트 상세페이지 새탭
+    var card=e.target.closest('.card');
+    if(card && card.dataset.url){ window.open(card.dataset.url,'_blank','noopener'); }
   });
 
   // ----- 무한 스크롤 -----
