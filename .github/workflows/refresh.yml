@@ -2,7 +2,7 @@ name: 이덴트 카탈로그 갱신
 
 on:
   schedule:
-    - cron: '0 * * * *'      # 매시 정각 (UTC 기준, 1시간 주기)
+    - cron: '0 20 * * *'      # 매일 20:00 UTC = 05:00 KST (1일 주기)
   workflow_dispatch:           # 수동 실행 버튼
 
 permissions:
@@ -15,17 +15,17 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 330
     steps:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
 
-      - name: 전체 크롤 (회원가 포함)
+      - name: 전체 크롤 (회원가 + 규격그룹 포함)
         shell: pwsh
         env:
           EDENT_ID: ${{ secrets.EDENT_ID }}
           EDENT_PW: ${{ secrets.EDENT_PW }}
-        run: ./crawl.ps1
+        run: ./crawl.ps1 -Details
 
       - name: 변경분 커밋 & 푸시
         run: |

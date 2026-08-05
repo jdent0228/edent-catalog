@@ -11,7 +11,9 @@ param(
   [string]$Id = $env:EDENT_ID,
   [string]$Pw = $env:EDENT_PW,
   [int]$DelayMs = 1000,          # Crawl-delay 1초 준수
-  [int]$MaxBuckets = 0           # 0=전체, >0이면 테스트용 제한
+  [int]$MaxBuckets = 0,          # 0=전체, >0이면 테스트용 제한
+  [switch]$Details,              # 상세페이지 크롤로 규격(변형) 그룹 수집
+  [int]$DetailsMax = 0           # 0=전체, >0이면 상세 방문 수 제한(테스트)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -114,6 +116,18 @@ function Parse-Products([string]$html) {
     if ($mid -match '^\s*<br>\s*\[([^\]]+)\]') { $origin = Dec $Matches[1] }
     elseif ($mid -match 'class="skyblue">([^<]+)<') { $origin = Dec $Matches[1] }
 
+    # 규격: 이름~가격 사이 텍스트형 <span class="impact">규격</span>.
+    # 즉시할인금액(Z_icon 뒤 "-0원" 등)을 규격으로 오인하지 않도록 Z_icon 이전 구간만 검색.
+    $spec = ''
+    $before = $mid
+    $zi = $mid.IndexOf('Z_icon')
+    if ($zi -ge 0) { $before = $mid.Substring(0, $zi) }
+    $sm = [regex]::Match($before, '<span class="impact">([^<]+)</span>')
+    if ($sm.Success) {
+      $s = (Dec ($sm.Groups[1].Value -replace '&nbsp;', ' '))
+      if ($s -and $s -notmatch '^-?[\d,]+\s*원?$') { $spec = $s }
+    }
+
     # 정가: 첫 @금액원
     $pList = $null
     if ($mid -match '@\s*([\d,]+)\s*원') { $pList = ToInt $Matches[1] }
@@ -123,7 +137,7 @@ function Parse-Products([string]$html) {
     if ($mm.Success -and $mm.Groups[1].Value) { $pMember = ToInt $mm.Groups[1].Value }
 
     $out.Add([pscustomobject]@{
-      id = $pdid; name = $nm; origin = $origin
+      id = $pdid; name = $nm; origin = $origin; spec = $spec
       priceList = $pList; priceMember = $pMember; priceReal = $pReal
     })
   }
@@ -136,6 +150,17 @@ function Get-MaxPage([string]$html) {
 }
 
 # ================= 4. 순회 =================
+# 이전 크롤 결과 로드 (그룹정보 gid 승계 + 목록에 없는 변형상품 유지용)
+$old = @{}
+$oldFile = Join-Path $PSScriptRoot 'data.json'
+if (Test-Path $oldFile) {
+  try {
+    $oldData = Get-Content $oldFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($o in $oldData.items) { $old[$o.id] = $o }
+    Write-Host "이전 데이터 로드: $($old.Count)건"
+  } catch { Write-Warning "이전 data.json 로드 실패: $($_.Exception.Message)" }
+}
+
 $items = @{}   # id -> record
 $reqCount = 0
 $bi = 0
@@ -159,15 +184,17 @@ foreach ($bk in $buckets) {
         if ($null -eq $rec.priceMember) { $rec.priceMember = $p.priceMember }
         if ($null -eq $rec.priceReal)   { $rec.priceReal = $p.priceReal }
         if (-not $rec.origin) { $rec.origin = $p.origin }
+        if (-not $rec.spec) { $rec.spec = $p.spec }
       } else {
         $items[$p.id] = [pscustomobject]@{
-          id = $p.id; name = $p.name; origin = $p.origin
+          id = $p.id; name = $p.name; origin = $p.origin; spec = $p.spec
           priceList = $p.priceList; priceMember = $p.priceMember; priceReal = $p.priceReal
           cat1 = $bk.c1n; cat2 = $bk.c2n
           catLeaf = $(if ($bk.depth -eq 3) { $catPath } else { '' })
           cats = @($catPath)
           img = "$Base/data/product/img_m1_$($p.id)"
           url = "$Base/shop/item.php?pd_idx=$($p.id)"
+          pkg = ''; gid = ''
         }
       }
     }
@@ -175,6 +202,102 @@ foreach ($bk in $buckets) {
     $page++
   }
   if ($bi % 25 -eq 0) { Write-Host ("  진행 $bi/$($buckets.Count) 버킷 · 요청 $reqCount · 상품 $($items.Count)") }
+}
+
+# ================= 4.5 이전 데이터 승계 =================
+# gid/pkg 승계 + 목록에 안 나오는 변형상품(그룹에서 발견된 형제) 유지
+foreach ($oid in $old.Keys) {
+  $o = $old[$oid]
+  if ($items.ContainsKey($oid)) {
+    $rec = $items[$oid]
+    if ($o.PSObject.Properties['gid'] -and $o.gid) { $rec.gid = $o.gid }
+    if ($o.PSObject.Properties['pkg'] -and $o.pkg -and -not $rec.pkg) { $rec.pkg = $o.pkg }
+    if (-not $rec.spec -and $o.spec) { $rec.spec = $o.spec }
+  } elseif ($o.PSObject.Properties['gid'] -and $o.gid -and $o.gid -ne $oid) {
+    # 목록 미노출 변형상품 → 유지 (가격은 대표상품 상세 재방문 시 갱신)
+    $items[$oid] = $o
+  }
+}
+
+# ================= 4.6 상세페이지 규격(변형) 크롤 =================
+# 상세페이지의 그룹 테이블(형제 상품: 코드번호 + 규격 + 포장단위 + 가격)을 파싱.
+# 그룹당 1회만 방문: 방문 시 형제 전원 covered 처리 + gid 기록 → 다음 실행부터 그룹 대표만 재방문.
+function Parse-GroupRows([string]$html) {
+  $anchors = [regex]::Matches($html, '<a href="/shop/item\.php\?pd_idx=(\d+)&">\s*(\d{2,6}-\d{2,6})\s*</a>')
+  $rows = [System.Collections.Generic.List[object]]::new()
+  for ($i = 0; $i -lt $anchors.Count; $i++) {
+    $st = $anchors[$i].Index
+    $en = if ($i + 1 -lt $anchors.Count) { $anchors[$i + 1].Index } else { [Math]::Min($st + 3500, $html.Length) }
+    $reg = $html.Substring($st, $en - $st)
+    $vid = $anchors[$i].Groups[1].Value
+
+    $nm = ''
+    foreach ($nmM in [regex]::Matches($reg, 'pd_idx=' + $vid + '&">([^<]+)</a>')) {
+      $t = (Dec $nmM.Groups[1].Value)
+      if ($t -notmatch '^\d{2,6}-\d{2,6}$') { $nm = $t; break }
+    }
+    $brand = ''
+    if ($reg -match '\[([^\]]+)\]') { $brand = Dec $Matches[1] }
+    $spec = ''
+    foreach ($im in [regex]::Matches($reg, '<span class="impact">\s*([^<]+?)\s*</span>')) {
+      $t = (Dec ($im.Groups[1].Value -replace '&nbsp;', ' ')).Trim()
+      if ($t -and $t -notmatch '^개당' -and $t -notmatch '^-?[\d,]+\s*원?$' -and $t -notmatch '@') { $spec = $t; break }
+    }
+    $pkg = ''
+    if ($reg -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkg = ($Matches[1] -replace '\s+', '') }
+    $prices = [regex]::Matches($reg, '\d+@\s*([\d,]+)\s*원') | ForEach-Object { ToInt $_.Groups[1].Value }
+    $pList = $null; $pMember = $null
+    if ($prices.Count -ge 1) { $pList = $prices[0] }
+    if ($prices.Count -ge 2) { $pMember = $prices[1] }
+
+    $rows.Add([pscustomobject]@{ id = $vid; name = $nm; spec = $spec; pkg = $pkg
+                                 origin = $brand; priceList = $pList; priceMember = $pMember })
+  }
+  , $rows
+}
+
+if ($Details) {
+  # 방문 대상: gid 없는 상품(신규/미분류) + 그룹 대표(gid == 자기 id)
+  $targets = @($items.Keys | Where-Object {
+    $g = $items[$_].gid
+    (-not $g) -or ($g -eq $_)
+  })
+  if ($DetailsMax -gt 0 -and $targets.Count -gt $DetailsMax) { $targets = $targets[0..($DetailsMax - 1)] }
+  Write-Host "상세(규격) 크롤 대상: $($targets.Count)개"
+  $covered = @{}; $dv = 0; $newVar = 0
+  foreach ($tid in $targets) {
+    if ($covered.ContainsKey($tid)) { continue }
+    try { $dh = Get-Html "$Base/shop/item.php?pd_idx=$tid" } catch { Write-Warning "상세 실패 $tid"; continue }
+    $dv++
+    $rep = $items[$tid]
+    $rep.gid = $tid
+    $covered[$tid] = 1
+    foreach ($row in (Parse-GroupRows $dh)) {
+      $covered[$row.id] = 1
+      if ($items.ContainsKey($row.id)) {
+        $r2 = $items[$row.id]
+        $r2.gid = $tid
+        if (-not $r2.spec -and $row.spec) { $r2.spec = $row.spec }
+        if (-not $r2.pkg -and $row.pkg)   { $r2.pkg = $row.pkg }
+        if ($null -eq $r2.priceList -and $null -ne $row.priceList)     { $r2.priceList = $row.priceList }
+        if ($null -eq $r2.priceMember -and $null -ne $row.priceMember) { $r2.priceMember = $row.priceMember }
+      } elseif ($row.name) {
+        $newVar++
+        $items[$row.id] = [pscustomobject]@{
+          id = $row.id; name = $row.name; origin = $(if ($row.origin) { $row.origin } else { $rep.origin })
+          spec = $row.spec
+          priceList = $row.priceList; priceMember = $row.priceMember; priceReal = $null
+          cat1 = $rep.cat1; cat2 = $rep.cat2; catLeaf = $rep.catLeaf; cats = $rep.cats
+          img = "$Base/data/product/img_m1_$($row.id)"
+          url = "$Base/shop/item.php?pd_idx=$($row.id)"
+          pkg = $row.pkg; gid = $tid
+        }
+      }
+    }
+    if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
+    if ($dv % 100 -eq 0) { Write-Host "  상세 진행 $dv (신규 변형 $newVar)" }
+  }
+  Write-Host "상세 완료: 방문 $($dv)회 · 신규 변형상품 $($newVar)개"
 }
 
 # ================= 5. 출력 =================

@@ -15,7 +15,7 @@
   html,body{margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",sans-serif;
     color:var(--text);background:var(--bg);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px;}
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px 80px;}
   a{color:inherit;text-decoration:none;}
 
   header{padding:22px 0 8px;}
@@ -61,41 +61,50 @@
   /* 공통 카드 */
   .card{border:1px solid var(--line);background:#fff;transition:.12s;overflow:hidden;}
   .card:hover{border-color:var(--line-strong);box-shadow:0 4px 16px rgba(0,0,0,.06);}
+  .cat-col{font-size:11px;color:var(--muted);word-break:keep-all;line-height:1.3;}
   .thumb{position:relative;background:var(--panel);overflow:hidden;
     display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
   .thumb img{width:100%;height:100%;object-fit:contain;}
-  .thumb .noimg{color:var(--muted);font-size:11px;text-align:center;}
+  .thumb .noimg{color:var(--muted);font-size:10px;text-align:center;}
   .badge{position:absolute;top:8px;left:8px;background:rgba(25,31,40,.72);color:#fff;
     font-size:10.5px;padding:2px 7px;border-radius:6px;max-width:82%;overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap;}
-  .nm{font-size:13px;font-weight:600;letter-spacing:-0.2px;word-break:keep-all;line-height:1.4;}
-  .cat{font-size:11px;color:var(--muted);word-break:keep-all;}
-  .p-mem{font-size:16px;font-weight:800;color:var(--blue);letter-spacing:-0.3px;white-space:nowrap;}
-  .p-mem small{font-size:10.5px;font-weight:700;color:#fff;background:var(--blue);
+  .nm{font-size:13.5px;font-weight:600;letter-spacing:-0.2px;word-break:keep-all;line-height:1.4;}
+  .sub{font-size:11px;color:var(--muted);word-break:keep-all;line-height:1.35;margin-top:2px;}
+  .sub b{color:var(--muted-2);font-weight:600;}
+  .p-mem{font-size:15px;font-weight:800;color:var(--blue);letter-spacing:-0.3px;white-space:nowrap;}
+  .p-mem small{font-size:10px;font-weight:700;color:#fff;background:var(--blue);
     border-radius:4px;padding:1px 4px;margin-right:4px;vertical-align:1px;}
-  .p-list{font-size:12.5px;color:var(--muted-2);font-weight:600;white-space:nowrap;}
-  .p-list.struck{text-decoration:line-through;color:var(--muted);font-weight:500;font-size:11.5px;}
-  .p-real{font-size:11.5px;color:var(--red);font-weight:700;white-space:nowrap;}
+  .p-list{font-size:12px;color:var(--muted-2);font-weight:600;white-space:nowrap;}
+  .p-list.struck{text-decoration:line-through;color:var(--muted);font-weight:500;font-size:11px;}
+  .p-real{font-size:11px;color:var(--red);font-weight:700;white-space:nowrap;}
   .p-none{font-size:12px;color:var(--muted);white-space:nowrap;}
 
   /* 앨범형(그리드) */
-  .grid.viewgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
+  .grid.viewgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
   .viewgrid .card{border-radius:14px;display:flex;flex-direction:column;}
-  .viewgrid .thumb{width:100%;aspect-ratio:1/1;}
-  .viewgrid .info{padding:10px 11px 13px;display:flex;flex-direction:column;gap:6px;flex:1;}
-  .viewgrid .info-main{display:flex;flex-direction:column;gap:4px;}
-  .viewgrid .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;}
+  .viewgrid .thumb{order:0;width:100%;aspect-ratio:1/1;}
+  .viewgrid .cat-col{order:1;padding:8px 11px 0;}
+  .viewgrid .info{order:2;padding:3px 11px 12px;display:flex;flex-direction:column;gap:5px;flex:1;}
+  .viewgrid .ninfo{display:flex;flex-direction:column;}
+  .viewgrid .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px;}
+  .viewgrid .sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .viewgrid .price{margin-top:auto;display:flex;flex-direction:column;gap:1px;}
 
-  /* 목록형(리스트) — 1행 1상품 */
-  .grid.viewlist{display:flex;flex-direction:column;gap:8px;}
-  .viewlist .card{border-radius:10px;display:flex;flex-direction:row;align-items:center;}
-  .viewlist .thumb{width:60px;height:60px;margin:8px 0 8px 8px;border-radius:8px;}
+  /* 목록형(리스트) — 1행 1상품, 카테고리=좌측열, 이름·가격 근접 */
+  .grid.viewlist{display:flex;flex-direction:column;gap:6px;}
+  .viewlist .card{border-radius:9px;display:flex;flex-direction:row;align-items:center;}
+  .viewlist .cat-col{flex:0 0 76px;padding:0 8px;border-right:1px solid var(--line);
+    align-self:stretch;display:flex;align-items:center;background:var(--panel);}
+  .viewlist .thumb{width:44px;height:44px;margin:6px 0 6px 8px;border-radius:6px;}
   .viewlist .badge{display:none;}
-  .viewlist .info{flex:1;min-width:0;display:flex;flex-direction:row;align-items:center;gap:14px;padding:10px 14px;}
-  .viewlist .info-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-  .viewlist .nm{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-  .viewlist .price{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;}
+  .viewlist .info{flex:1;min-width:0;display:flex;flex-direction:row;align-items:center;
+    justify-content:space-between;gap:12px;padding:6px 12px;}
+  .viewlist .ninfo{flex:1;min-width:0;}
+  .viewlist .nm{white-space:normal;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .viewlist .sub{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+  .viewlist .price{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:0;text-align:right;}
 
   .empty{padding:70px 0;text-align:center;color:var(--muted);font-size:14px;}
   #sentinel{height:1px;}
@@ -165,6 +174,17 @@
     return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function won(n){return n==null?'':n.toLocaleString('ko-KR')+'원';}
 
+  // ----- 검색 인덱스: 초성 + 공백제거 정규화 (상품명 + 규격) -----
+  var CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  function toCho(s){var o='';for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
+    if(c>=0xAC00&&c<=0xD7A3)o+=CHO[Math.floor((c-0xAC00)/588)];else o+=s[i];}return o;}
+  function norm(s){return(s||'').toLowerCase().replace(/\s+/g,'');}
+  items.forEach(function(x){
+    var t=(x.name||'')+' '+(x.spec||'')+' '+(x.origin||'');
+    x._sn=norm(t);            // 공백제거 소문자 (이름+규격+브랜드)
+    x._sc=toCho(x._sn);       // 초성 문자열 (초성 검색)
+  });
+
   // ----- 카테고리(대분류) 칩 -----
   var fCat=new Set(), chipRefs=[];
   (function(){
@@ -203,10 +223,14 @@
   }
   function priceKey(x){var p=mainPrice(x);return p==null?Infinity:p;}
   function compute(){
-    var qq=q.trim().toLowerCase();
+    // 공백으로 토큰 분리 → 각 토큰이 이름/규격(일반 or 초성) 어딘가에 있으면 매치(AND)
+    var tokens=q.trim().toLowerCase().split(/\s+/).filter(Boolean).map(function(t){return t.replace(/\s+/g,'');});
     filtered=items.filter(function(x){
       if(!fCat.has(x.cat1||'기타')) return false;
-      if(qq && (x.name||'').toLowerCase().indexOf(qq)===-1) return false;
+      for(var i=0;i<tokens.length;i++){
+        var tk=tokens[i];
+        if(x._sn.indexOf(tk)===-1 && x._sc.indexOf(tk)===-1) return false;
+      }
       return true;
     });
     if(sortMode==='name') filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','ko');});
@@ -226,18 +250,20 @@
     } else {
       priceBlock='<div class="p-none">가격 문의</div>';
     }
+    var subParts=[];
+    if(x.spec) subParts.push(esc(x.spec));
+    if(x.pkg) subParts.push(esc(x.pkg));
+    if(x.origin) subParts.push('<b>'+esc(x.origin)+'</b>');
+    var subHTML=subParts.length?'<div class="sub">'+subParts.join(' · ')+'</div>':'';
     return '<a class="card" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+
+      '<div class="cat-col">'+esc(x.cat1||'')+'</div>'+
       '<div class="thumb">'+
         '<img loading="lazy" src="'+esc(x.img)+'" alt="" '+
           'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'+
-        '<span class="noimg" style="display:none">이미지 없음</span>'+
-        (x.origin?'<span class="badge">'+esc(x.origin)+'</span>':'')+
+        '<span class="noimg" style="display:none">이미지<br>없음</span>'+
       '</div>'+
       '<div class="info">'+
-        '<div class="info-main">'+
-          '<div class="nm">'+esc(x.name)+'</div>'+
-          '<div class="cat">'+esc(x.cat2||x.cat1||'')+'</div>'+
-        '</div>'+
+        '<div class="ninfo"><div class="nm">'+esc(x.name)+'</div>'+subHTML+'</div>'+
         '<div class="price">'+priceBlock+'</div>'+
       '</div></a>';
   }
