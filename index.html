@@ -15,7 +15,15 @@
   html,body{margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",sans-serif;
     color:var(--text);background:var(--bg);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
-  .wrap{max-width:1000px;margin:0 auto;padding:0 16px 80px;}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 16px 80px;}
+
+  /* 좌측 사이드바 레이아웃 */
+  .layout{display:flex;gap:22px;align-items:flex-start;margin-top:12px;}
+  .side{flex:0 0 200px;position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;
+    border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px;}
+  .side-title{font-size:13px;font-weight:800;margin-bottom:8px;letter-spacing:-0.2px;}
+  .side-toggle{display:none;}
+  .main{flex:1;min-width:0;}
   a{color:inherit;text-decoration:none;}
   button{font-family:inherit;}
 
@@ -46,18 +54,33 @@
   .viewtoggle button.on{background:var(--blue);color:#fff;}
   .viewtoggle svg{width:18px;height:18px;}
 
-  /* 카테고리 칩 */
-  .cats{display:flex;flex-wrap:wrap;gap:6px;padding:12px 0 2px;}
-  .chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted-2);
-    border:1px solid var(--line);border-radius:16px;padding:5px 11px;cursor:pointer;
-    user-select:none;background:var(--bg);white-space:nowrap;transition:.12s;}
-  .chip i{color:var(--muted);font-style:normal;font-size:10.5px;}
+  /* 카테고리 칩 (사이드바 세로 배열) */
+  .cats{display:flex;flex-direction:column;gap:5px;padding:10px 0 2px;}
+  .chip{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12.5px;
+    color:var(--muted-2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer;
+    user-select:none;background:var(--bg);transition:.12s;word-break:keep-all;}
+  .chip i{color:var(--muted);font-style:normal;font-size:10.5px;flex:0 0 auto;}
   .chip.on{background:var(--blue);color:#fff;border-color:var(--blue);}
   .chip.on i{color:#cfe0ff;}
-  .cat-tools{display:flex;gap:6px;align-items:center;padding:8px 0 0;}
-  .cat-tools button{font-size:11.5px;color:var(--muted-2);background:none;border:1px solid var(--line-strong);
+  .cat-tools{display:flex;gap:6px;align-items:center;}
+  .cat-tools button{font-size:11.5px;color:var(--muted-2);background:var(--bg);border:1px solid var(--line-strong);
     border-radius:6px;padding:4px 9px;cursor:pointer;}
   .cat-tools button:hover{background:var(--hover);color:var(--text);}
+
+  /* 모바일: 사이드바 → 접이식 (기본 접힘) */
+  @media (max-width:860px){
+    .layout{flex-direction:column;gap:10px;}
+    .side{position:static;flex:none;width:100%;max-height:none;padding:0;overflow:visible;}
+    .side-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;
+      background:none;border:none;cursor:pointer;padding:11px 14px;font-size:13px;font-weight:700;
+      color:var(--text);}
+    .side-toggle b{color:var(--blue);font-weight:700;margin-left:4px;}
+    .side-toggle i{font-style:normal;color:var(--muted);transition:transform .15s;}
+    .side.open .side-toggle i{transform:rotate(180deg);}
+    .side-body{display:none;padding:0 14px 14px;}
+    .side.open .side-body{display:block;}
+    .side-title{display:none;}
+  }
 
   .count{padding:14px 2px 10px;font-size:12.5px;color:var(--muted);}
   .count b{color:var(--text);font-weight:700;}
@@ -185,10 +208,20 @@
     </div>
   </div>
 
-  <div class="cats" id="catChips"></div>
-  <div class="cat-tools">
-    <button id="catAll">전체 선택</button><button id="catNone">전체 해제</button>
-  </div>
+  <div class="layout">
+  <aside class="side" id="side">
+    <button class="side-toggle" id="sideToggle">
+      <span>카테고리 필터 <b id="catSel"></b></span><i id="sideArrow">▾</i>
+    </button>
+    <div class="side-body">
+      <div class="side-title">카테고리</div>
+      <div class="cat-tools">
+        <button id="catAll">전체 선택</button><button id="catNone">전체 해제</button>
+      </div>
+      <div class="cats" id="catChips"></div>
+    </div>
+  </aside>
+  <div class="main">
 
   <div class="count">검색 결과 <b id="resultCount">0</b>개</div>
 
@@ -208,6 +241,9 @@
   <div class="empty" id="empty" style="display:none;">조건에 맞는 상품이 없습니다.</div>
   <div class="loadmore" id="loadmore" style="display:none;"><button id="loadmoreBtn">더 보기</button></div>
   <div id="sentinel"></div>
+
+  </div><!-- /.main -->
+  </div><!-- /.layout -->
 </div>
 <div id="toast"></div>
 
@@ -299,6 +335,15 @@
     chipRefs.forEach(function(r){fCat.add(r.v);r.el.classList.add('on');});apply();});
   document.getElementById('catNone').addEventListener('click',function(){
     fCat.clear();chipRefs.forEach(function(r){r.el.classList.remove('on');});apply();});
+
+  // 모바일 접이식 사이드바 (기본 접힘)
+  document.getElementById('sideToggle').addEventListener('click',function(){
+    document.getElementById('side').classList.toggle('open');
+  });
+  function updateCatSel(){
+    var el=document.getElementById('catSel');
+    if(el) el.textContent=fCat.size+'/'+chipRefs.length;
+  }
 
   // ----- 필터/정렬 -----
   var q='', sortMode='name';
@@ -414,6 +459,7 @@
   }
   function apply(){
     compute();
+    updateCatSel();
     grid.innerHTML=''; shown=0;
     empty.style.display=filtered.length?'none':'block';
     renderMore();

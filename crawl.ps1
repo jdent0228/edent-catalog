@@ -323,6 +323,13 @@ if ($Details) {
         if (-not $r2.spec -and $row.spec) { $r2.spec = $row.spec }
         if (-not $r2.pkg -and $row.pkg)   { $r2.pkg = $row.pkg }
         if (-not $r2.code -and $row.code) { $r2.code = $row.code }
+        # 그룹에서 규격이 채워진 뒤, 목록 이름 끝에 붙은 규격 중복 제거
+        if ($r2.spec) {
+          $spT3 = $r2.spec.Trim()
+          if ($spT3 -and $r2.name.TrimEnd().EndsWith($spT3)) {
+            $r2.name = $r2.name.TrimEnd().Substring(0, $r2.name.TrimEnd().Length - $spT3.Length).Trim()
+          }
+        }
         if ($null -eq $r2.priceList -and $null -ne $row.priceList)     { $r2.priceList = $row.priceList }
         if ($null -eq $r2.priceMember -and $null -ne $row.priceMember) { $r2.priceMember = $row.priceMember }
       } elseif ($row.name) {
