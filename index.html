@@ -18,8 +18,16 @@
   .wrap{max-width:1240px;margin:0 auto;padding:0 16px 80px;}
 
   /* 좌측 사이드바 레이아웃 */
-  .layout{display:flex;gap:22px;align-items:flex-start;margin-top:12px;}
-  .side{flex:0 0 200px;position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;
+  .layout{display:flex;gap:22px;align-items:flex-start;margin-top:16px;}
+  .left{flex:0 0 208px;display:flex;flex-direction:column;gap:12px;min-width:0;}
+  .logo-box{display:flex;gap:10px;align-items:flex-start;padding:6px 2px 0;}
+  .logo-mark{flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:var(--blue);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;}
+  .logo-text{font-size:15px;font-weight:800;letter-spacing:-0.3px;line-height:1.25;padding-top:1px;}
+  .logo-text .meta{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;line-height:1.5;}
+  .logo-text .meta b{color:var(--muted-2);font-weight:600;}
+  .warn{color:var(--red);font-size:12px;display:none;padding:0 2px;}
+  .side{position:sticky;top:12px;max-height:calc(100vh - 28px);overflow-y:auto;
     border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px;}
   .side-title{font-size:13px;font-weight:800;margin-bottom:8px;letter-spacing:-0.2px;}
   .side-toggle{display:none;}
@@ -27,14 +35,8 @@
   a{color:inherit;text-decoration:none;}
   button{font-family:inherit;}
 
-  header{padding:20px 0 8px;}
-  header h1{font-size:20px;font-weight:800;margin:0 0 3px;letter-spacing:-0.4px;}
-  header .meta{color:var(--muted);font-size:12.5px;}
-  header .meta b{color:var(--muted-2);font-weight:600;}
-  header .warn{color:var(--red);font-size:12px;margin-top:4px;display:none;}
-
   /* 검색/정렬/즐겨찾기/뷰 스티키 바 */
-  .bar{position:sticky;top:0;z-index:20;background:var(--bg);padding:12px 0 10px;
+  .bar{position:sticky;top:0;z-index:20;background:var(--bg);padding:2px 0 10px;
     border-bottom:1px solid var(--line);}
   .search{display:flex;gap:8px;align-items:center;}
   .search input{flex:1;min-width:0;height:44px;border:1px solid var(--line-strong);border-radius:12px;
@@ -54,14 +56,18 @@
   .viewtoggle button.on{background:var(--blue);color:#fff;}
   .viewtoggle svg{width:18px;height:18px;}
 
-  /* 카테고리 칩 (사이드바 세로 배열) */
-  .cats{display:flex;flex-direction:column;gap:5px;padding:10px 0 2px;}
-  .chip{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12.5px;
-    color:var(--muted-2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer;
-    user-select:none;background:var(--bg);transition:.12s;word-break:keep-all;}
-  .chip i{color:var(--muted);font-style:normal;font-size:10.5px;flex:0 0 auto;}
-  .chip.on{background:var(--blue);color:#fff;border-color:var(--blue);}
-  .chip.on i{color:#cfe0ff;}
+  /* 카테고리 칩 (사이드바 세로 배열, 선택 = 차분한 강조) */
+  .cats{display:flex;flex-direction:column;gap:3px;padding:10px 0 2px;}
+  .chip{display:flex;align-items:center;gap:7px;font-size:12.5px;
+    color:#b4bcc6;border:1px solid transparent;border-radius:8px;padding:6px 9px;cursor:pointer;
+    user-select:none;background:none;transition:.12s;word-break:keep-all;}
+  .chip::before{content:'';flex:0 0 auto;width:6px;height:6px;border-radius:50%;
+    background:var(--line-strong);transition:.12s;}
+  .chip i{color:#c8ced6;font-style:normal;font-size:10.5px;flex:0 0 auto;margin-left:auto;}
+  .chip:hover{background:#fff;}
+  .chip.on{background:#fff;border-color:var(--line);color:var(--text);font-weight:600;}
+  .chip.on::before{background:var(--blue);}
+  .chip.on i{color:var(--muted);}
   .cat-tools{display:flex;gap:6px;align-items:center;}
   .cat-tools button{font-size:11.5px;color:var(--muted-2);background:var(--bg);border:1px solid var(--line-strong);
     border-radius:6px;padding:4px 9px;cursor:pointer;}
@@ -69,8 +75,9 @@
 
   /* 모바일: 사이드바 → 접이식 (기본 접힘) */
   @media (max-width:860px){
-    .layout{flex-direction:column;gap:10px;}
-    .side{position:static;flex:none;width:100%;max-height:none;padding:0;overflow:visible;}
+    .layout{flex-direction:column;gap:10px;margin-top:10px;}
+    .left{flex:none;width:100%;gap:10px;}
+    .side{position:static;width:100%;max-height:none;padding:0;overflow:visible;}
     .side-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;
       background:none;border:none;cursor:pointer;padding:11px 14px;font-size:13px;font-weight:700;
       color:var(--text);}
@@ -175,11 +182,27 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>이덴트 상품 카탈로그</h1>
-    <div class="meta">총 <b id="totalCount">0</b>개 · 갱신 <span id="genAt">-</span> · 자료 <a href="https://www.edent.co.kr" target="_blank" rel="noopener" style="color:var(--blue)">edent.co.kr</a></div>
-    <div class="warn" id="memWarn">⚠ 비로그인 크롤 데이터 — 회원가가 비어 있습니다.</div>
-  </header>
+  <div class="layout">
+  <div class="left">
+  <div class="logo-box">
+    <div class="logo-mark">이</div>
+    <div class="logo-text">이덴트 카탈로그<span class="meta">총 <b id="totalCount">0</b>개 · <span id="genAt">-</span><br>자료 <a href="https://www.edent.co.kr" target="_blank" rel="noopener" style="color:var(--blue)">edent.co.kr</a></span></div>
+  </div>
+  <div class="warn" id="memWarn">⚠ 비로그인 크롤 데이터 — 회원가가 비어 있습니다.</div>
+  <aside class="side" id="side">
+    <button class="side-toggle" id="sideToggle">
+      <span>카테고리 필터 <b id="catSel"></b></span><i id="sideArrow">▾</i>
+    </button>
+    <div class="side-body">
+      <div class="side-title">카테고리</div>
+      <div class="cat-tools">
+        <button id="catAll">전체 선택</button><button id="catNone">전체 해제</button>
+      </div>
+      <div class="cats" id="catChips"></div>
+    </div>
+  </aside>
+  </div><!-- /.left -->
+  <div class="main">
 
   <div class="bar">
     <div class="search">
@@ -207,21 +230,6 @@
       </div>
     </div>
   </div>
-
-  <div class="layout">
-  <aside class="side" id="side">
-    <button class="side-toggle" id="sideToggle">
-      <span>카테고리 필터 <b id="catSel"></b></span><i id="sideArrow">▾</i>
-    </button>
-    <div class="side-body">
-      <div class="side-title">카테고리</div>
-      <div class="cat-tools">
-        <button id="catAll">전체 선택</button><button id="catNone">전체 해제</button>
-      </div>
-      <div class="cats" id="catChips"></div>
-    </div>
-  </aside>
-  <div class="main">
 
   <div class="count">검색 결과 <b id="resultCount">0</b>개</div>
 
