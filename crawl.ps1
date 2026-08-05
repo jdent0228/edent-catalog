@@ -270,9 +270,11 @@ if ($Details) {
     try { $dh = Get-Html "$Base/shop/item.php?pd_idx=$tid" } catch { Write-Warning "상세 실패 $tid"; continue }
     $dv++
     $rep = $items[$tid]
-    $rep.gid = $tid
     $covered[$tid] = 1
-    foreach ($row in (Parse-GroupRows $dh)) {
+    $rows = Parse-GroupRows $dh
+    # 형제 규격이 있으면 진짜 그룹(대표=재방문 대상), 없으면 solo(이후 방문 생략)
+    $rep.gid = $(if ($rows.Count -ge 2) { $tid } else { 'solo' })
+    foreach ($row in $rows) {
       $covered[$row.id] = 1
       if ($items.ContainsKey($row.id)) {
         $r2 = $items[$row.id]
