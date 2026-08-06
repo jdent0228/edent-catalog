@@ -314,7 +314,7 @@
   .viewlist .c-comp{text-align:center;}
   .comp-txt{font-size:12px;color:var(--muted-2);word-break:keep-all;line-height:1.3;}
   .comp-ct{font-size:10.5px;color:var(--muted);margin-top:1px;}
-  .shop-tag{display:inline-block;font-size:9.5px;border-radius:4px;padding:0 5px;margin-top:3px;line-height:16px;}
+  .shop-tag{display:inline-block;font-size:9.5px;border-radius:4px;padding:0 5px;margin-bottom:3px;line-height:16px;}
   .shop-edent{background:var(--blue-soft);color:var(--blue);}
   .shop-seil{background:#e6fcf5;color:#0ca678;}
   mark{background:#ffe8a3;color:inherit;padding:0 1px;border-radius:3px;}
@@ -411,14 +411,16 @@
     /* 공유·하트: 박스 우상단 */
     .viewlist .card:not(.kid) .c-act{position:absolute;right:7px;top:6px;padding:0;}
 
-    /* 더보기: 화살표만, 규격 행과 살짝 겹치게 (한 줄을 차지하지 않음) */
-    .viewlist .card.lead{padding-bottom:14px;}
+    /* 더보기: 파란 이중 화살표(가로로 넓게), 규격 행과 살짝 겹치게 */
+    .viewlist .card.lead{padding-bottom:16px;}
     .viewlist .card.lead .spec-btn{position:absolute;left:50%;transform:translateX(-50%);
-      bottom:0;margin:0;padding:0 16px;background:none;color:var(--muted);
-      font-size:0;line-height:13px;border-radius:6px;}
-    .viewlist .card.lead .spec-btn::after{content:'⌄';font-size:13px;line-height:13px;}
-    .viewlist .grp.open .lead .spec-btn::after{content:'⌃';}
-    .viewlist .card.lead .spec-btn:active{background:var(--panel);color:var(--blue);}
+      bottom:1px;margin:0;padding:0;background:none;font-size:0;line-height:0;border-radius:6px;
+      width:46px;height:15px;display:flex;align-items:center;justify-content:center;}
+    .viewlist .card.lead .spec-btn::after{
+      content:'';display:block;width:42px;height:13px;transition:transform .15s;
+      background:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 14' fill='none' stroke='%233182f6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 2.5 L21 9.5 L37 2.5'/%3E%3Cpath d='M5 7.5 L21 14.5 L37 7.5'/%3E%3C/svg%3E") no-repeat center/contain;}
+    .viewlist .grp.open .lead .spec-btn::after{transform:rotate(180deg);}
+    .viewlist .card.lead .spec-btn:active::after{opacity:.6;}
 
     /* 펼친 규격 행: 규격 | 가격 | 아이콘 */
     .m-acc .kid .c-comp,.m-acc .kid .c-cat,.m-acc .kid .nm{display:none;}
@@ -998,8 +1000,8 @@
   }
   function rowHTML(x,gn){
     return '<div class="card" data-url="'+esc(x.url)+'">'+
-      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(x.cat1||'')+'">'+esc(x.cat1||'')+'</div>'+
-        '<span class="shop-tag shop-'+esc(x.shop)+'">'+esc(SHOPS[x.shop]||x.shop)+'</span></div>'+
+      '<div class="c-cat"><span class="shop-tag shop-'+esc(x.shop)+'">'+esc(SHOPS[x.shop]||x.shop)+'</span>'+
+        '<div class="cat-txt" data-tip="'+esc(x.cat1||'')+'">'+esc(x.cat1||'')+'</div></div>'+
       '<div class="c-img">'+thumbHTML(x)+'</div>'+
       '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(x.company||'')+'">'+(x.company?hl(x.company):'-')+'</div>'+
         (x.country?'<div class="comp-ct">'+esc(x.country)+'</div>':'')+'</div>'+
@@ -1050,8 +1052,8 @@
     var ms=g.ms, lead=ms[0], n=ms.length;
     if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
     var head='<div class="card lead" data-toggle="1">'+
-      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div>'+
-        '<span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-cat"><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span>'+
+        '<div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
       '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(lead.company||'')+'">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
@@ -1086,8 +1088,8 @@
     }).join('');
     if(n>LIM) chips+='<span class="specmore">+'+(n-LIM)+'</span>';
     return '<div class="card" data-url="'+esc(lead.url)+'">'+
-      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div>'+
-        '<span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-cat"><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span>'+
+        '<div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
       '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(lead.company||'')+'">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
@@ -1104,8 +1106,8 @@
     if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
     var open=expanded.has(g.gk);
     var head='<div class="card lead" data-url="'+esc(lead.url)+'">'+
-      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div>'+
-        '<span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-cat"><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span>'+
+        '<div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
       '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(lead.company||'')+'">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
