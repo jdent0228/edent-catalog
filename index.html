@@ -96,20 +96,43 @@
     .side-title{display:none;}
   }
 
-  /* 검색 시 검색창 아래 뜨는 회사 칩 바 */
-  .compbar{display:none;gap:6px;padding:11px 0 1px;overflow-x:auto;align-items:center;
-    scrollbar-width:thin;}
+  /* 회사 칩 바 (검색 결과 수 아래) — 스크롤 없이 줄바꿈, 넘치면 전체보기 모달 */
+  .compbar{display:none;gap:5px;padding:2px 0 10px;align-items:stretch;flex-wrap:wrap;}
   .compbar.on{display:flex;}
-  .compbar::-webkit-scrollbar{height:5px;}
-  .compbar::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
-  .compbar .lbl{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--muted);padding-right:2px;}
-  .cpill{flex:0 0 auto;font-size:12px;color:var(--muted-2);border:1px solid var(--line);
-    border-radius:14px;padding:4px 11px;cursor:pointer;background:#fff;white-space:nowrap;transition:.12s;}
+  .compbar .lbl{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--muted);
+    align-self:center;padding-right:2px;}
+  .cpill{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-size:11.5px;color:var(--muted-2);border:1px solid var(--line);border-radius:9px;
+    padding:3px 10px;cursor:pointer;background:#fff;white-space:nowrap;transition:.12s;line-height:1.15;}
   .cpill:hover{border-color:var(--line-strong);color:var(--text);}
-  .cpill i{font-style:normal;font-size:10px;color:var(--muted);margin-left:4px;}
+  .cpill i{font-style:normal;font-size:10px;color:var(--muted);}
   .cpill.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;}
   .cpill.on i{color:#cfe0ff;}
-  .cpill.clear{border-style:dashed;color:var(--muted);}
+  .cpill.clear{border-style:dashed;color:var(--muted);justify-content:center;}
+  .cpill.more{border-style:dashed;border-color:var(--blue);color:var(--blue);font-weight:600;}
+
+  /* 회사 전체보기 모달 */
+  #compModal{position:fixed;inset:0;background:rgba(17,20,24,.45);display:none;
+    align-items:center;justify-content:center;z-index:95;padding:20px;}
+  #compModal.show{display:flex;}
+  .cm-box{background:#fff;border-radius:14px;width:min(94vw,660px);max-height:82vh;
+    display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.28);overflow:hidden;}
+  .cm-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);}
+  .cm-head h3{margin:0;font-size:15px;font-weight:800;flex:0 0 auto;}
+  .cm-head input{flex:1;height:34px;border:1px solid var(--line-strong);border-radius:8px;
+    padding:0 10px;font-size:13px;outline:none;background:var(--panel);}
+  .cm-head input:focus{border-color:var(--blue);background:#fff;}
+  .cm-x{flex:0 0 auto;width:30px;height:30px;border:none;background:none;cursor:pointer;
+    font-size:17px;color:var(--muted);border-radius:8px;}
+  .cm-x:hover{background:var(--hover);color:var(--text);}
+  .cm-body{padding:12px 16px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;}
+  .cm-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;
+    padding:11px 16px;border-top:1px solid var(--line);background:var(--panel);}
+  .cm-foot span{font-size:12px;color:var(--muted);}
+  .cm-foot button{font-size:12.5px;border:1px solid var(--line-strong);background:#fff;
+    border-radius:8px;padding:6px 14px;cursor:pointer;}
+  .cm-foot button:hover{background:var(--hover);}
+  .cm-foot .primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;}
 
   .count{padding:14px 2px 10px;font-size:12.5px;color:var(--muted);}
   .count b{color:var(--text);font-weight:700;}
@@ -404,9 +427,9 @@
     </div>
   </div>
 
-  <div class="compbar" id="compBar"></div>
-
   <div class="count">검색 결과 <b id="resultCount">0</b>개</div>
+
+  <div class="compbar" id="compBar"></div>
 
   <div class="table-zone">
     <div class="lhead" id="listHead">
@@ -430,6 +453,20 @@
 </div>
 <div id="toast"></div>
 <div id="imgModal"><img id="imgModalPic" alt=""></div>
+<div id="compModal">
+  <div class="cm-box">
+    <div class="cm-head">
+      <h3>회사 선택</h3>
+      <input id="cmQ" type="search" placeholder="회사 검색" autocomplete="off">
+      <button class="cm-x" id="cmClose">✕</button>
+    </div>
+    <div class="cm-body" id="cmList"></div>
+    <div class="cm-foot">
+      <span id="cmInfo"></span>
+      <span><button id="cmClear">선택 해제</button> <button class="primary" id="cmDone">적용</button></span>
+    </div>
+  </div>
+</div>
 
 <script src="data.js"></script>
 <script>
@@ -622,32 +659,76 @@
     renderCompBar(compCounts);
   }
 
-  // 검색 중일 때 검색창 아래에 회사 칩을 가로로 노출
+  // 검색 중일 때 결과 수 아래에 회사 칩 노출 (스크롤 없이 줄바꿈, 넘치면 전체보기 모달)
+  var lastCompCounts={};
+  // 좁은 화면에서 여러 줄로 늘어지지 않도록 노출 개수를 화면 폭에 맞춤
+  function barTop(){
+    var w=window.innerWidth||1024;
+    if(w<=480) return 4;
+    if(w<=700) return 6;
+    if(w<=980) return 8;
+    return 10;
+  }
+  function pillHTML(v,n){
+    return '<span class="cpill'+(fComp.has(v)?' on':'')+'" data-comp="'+esc(v)+'">'+
+      esc(v)+'<i>'+n+'</i></span>';
+  }
   function renderCompBar(counts){
+    lastCompCounts=counts;
     var bar=document.getElementById('compBar');
     var searching=!!q.trim();
     var names=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
     fComp.forEach(function(v){ if(names.indexOf(v)===-1) names.unshift(v); });
     if(!searching || names.length<2){ bar.className='compbar'; bar.innerHTML=''; return; }
     bar.className='compbar on';
+    var top=barTop();
     var html='<span class="lbl">회사</span>';
-    names.slice(0,12).forEach(function(v){
-      html+='<span class="cpill'+(fComp.has(v)?' on':'')+'" data-comp="'+esc(v)+'">'+
-        esc(v)+' <i>'+(counts[v]||0)+'</i></span>';
-    });
-    if(names.length>12) html+='<span class="cpill" style="border-style:dashed;cursor:default">외 '+(names.length-12)+'</span>';
+    names.slice(0,top).forEach(function(v){ html+=pillHTML(v,counts[v]||0); });
+    if(names.length>top)
+      html+='<span class="cpill more" data-compall="1">전체보기<i>'+names.length+'</i></span>';
     if(fComp.size) html+='<span class="cpill clear" data-compclear="1">선택 해제</span>';
     bar.innerHTML=html;
   }
   document.getElementById('compBar').addEventListener('click',function(e){
-    var cl=e.target.closest('[data-compclear]');
-    if(cl){ fComp.clear(); apply(); return; }
+    if(e.target.closest('[data-compall]')){ openCompModal(); return; }
+    if(e.target.closest('[data-compclear]')){ fComp.clear(); apply(); return; }
     var p=e.target.closest('[data-comp]');
     if(!p) return;
     var v=p.dataset.comp;
     if(fComp.has(v)) fComp.delete(v); else fComp.add(v);
     apply();
   });
+
+  // ----- 회사 전체보기 모달 -----
+  var cmEl=document.getElementById('compModal'), cmList=document.getElementById('cmList'),
+      cmQ=document.getElementById('cmQ'), cmInfo=document.getElementById('cmInfo');
+  function renderCmList(){
+    var qq=norm(cmQ.value||'');
+    var names=Object.keys(lastCompCounts);
+    fComp.forEach(function(v){ if(names.indexOf(v)===-1) names.push(v); });
+    if(qq) names=names.filter(function(v){return norm(v).indexOf(qq)!==-1;});
+    names.sort(function(a,b){return (lastCompCounts[b]||0)-(lastCompCounts[a]||0);});
+    cmList.innerHTML=names.length
+      ? names.map(function(v){return pillHTML(v,lastCompCounts[v]||0);}).join('')
+      : '<div style="color:var(--muted);font-size:13px;padding:14px 2px;">일치하는 회사가 없습니다.</div>';
+    cmInfo.textContent='회사 '+names.length+'개'+(fComp.size?' · '+fComp.size+'개 선택':'');
+  }
+  function openCompModal(){ cmQ.value=''; renderCmList(); cmEl.classList.add('show'); cmQ.focus(); }
+  function closeCompModal(){ cmEl.classList.remove('show'); }
+  cmList.addEventListener('click',function(e){
+    var p=e.target.closest('[data-comp]'); if(!p) return;
+    var v=p.dataset.comp;
+    if(fComp.has(v)){ fComp.delete(v); p.classList.remove('on'); }
+    else { fComp.add(v); p.classList.add('on'); }
+    cmInfo.textContent=cmInfo.textContent.replace(/ · \d+개 선택$/,'')+(fComp.size?' · '+fComp.size+'개 선택':'');
+    apply();
+  });
+  cmQ.addEventListener('input',renderCmList);
+  document.getElementById('cmClose').addEventListener('click',closeCompModal);
+  document.getElementById('cmDone').addEventListener('click',closeCompModal);
+  document.getElementById('cmClear').addEventListener('click',function(){ fComp.clear(); apply(); renderCmList(); });
+  cmEl.addEventListener('click',function(e){ if(e.target===cmEl) closeCompModal(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeCompModal(); });
   document.getElementById('catAll').addEventListener('click',function(){
     items.forEach(function(x){fCat.add(x.cat1||'기타');}); apply();});
   document.getElementById('catNone').addEventListener('click',function(){
@@ -1041,6 +1122,9 @@
   // ----- 검색/정렬 -----
   var qEl=document.getElementById('q'), t=null;
   qEl.addEventListener('input',function(){q=qEl.value;if(t)clearTimeout(t);t=setTimeout(apply,160);});
+  // 화면 폭이 바뀌면 회사 칩 노출 개수 재계산
+  (function(){var rt=null;window.addEventListener('resize',function(){
+    if(rt)clearTimeout(rt);rt=setTimeout(function(){renderCompBar(lastCompCounts);},200);});})();
   // 그룹 표시 방식
   function setGroupMode(v){
     groupMode=v;
