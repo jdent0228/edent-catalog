@@ -72,6 +72,13 @@
   .cat-tools button{font-size:11.5px;color:var(--muted-2);background:var(--bg);border:1px solid var(--line-strong);
     border-radius:6px;padding:4px 9px;cursor:pointer;}
   .cat-tools button:hover{background:var(--hover);color:var(--text);}
+  .side-title b{font-weight:600;color:var(--blue);font-size:11px;margin-left:3px;}
+  .side-search{width:100%;height:28px;border:1px solid var(--line-strong);border-radius:7px;
+    padding:0 8px;font-size:12px;background:#fff;outline:none;margin-top:6px;}
+  .side-search:focus{border-color:var(--blue);}
+  .lnk-clear{width:100%;margin-top:6px;font-size:11.5px;color:var(--muted-2);background:var(--bg);
+    border:1px solid var(--line-strong);border-radius:6px;padding:4px 0;cursor:pointer;}
+  .lnk-clear:hover{background:var(--hover);color:var(--text);}
 
   /* 모바일: 사이드바 → 접이식 (기본 접힘) */
   @media (max-width:860px){
@@ -254,6 +261,54 @@
   .viewgrid .price{display:flex;flex-direction:column;gap:1px;}
   .viewgrid .acts{display:flex;gap:1px;}
 
+  /* ===================== 모바일 (≤700px) ===================== */
+  @media (max-width:700px){
+    .wrap{padding:0 10px 60px;}
+    .table-zone{overflow-x:visible;}
+    .lhead{display:none !important;}
+    .grid.viewlist{min-width:0;gap:7px;}
+
+    /* 행: 사진·카테고리 열 제거하고 2줄로 접기 */
+    .viewlist .card{flex-wrap:wrap;align-items:flex-start;padding:9px 11px;row-gap:5px;}
+    .viewlist .c-img{display:none;}
+    .viewlist .c-cat{flex:0 0 auto;order:1;padding:0;text-align:left;font-size:10.5px;}
+    .viewlist .c-cat br{display:none;}
+    .viewlist .shop-tag{margin-left:5px;}
+    .viewlist .c-main{flex:1 1 100%;order:2;padding:0;text-align:left;min-width:0;}
+    .viewlist .nm{font-size:13.5px;}
+    .viewlist .c-comp{flex:0 0 auto;order:3;padding:0;text-align:left;}
+    .viewlist .comp-txt{font-size:11.5px;}
+    .viewlist .comp-ct{display:inline;margin-left:4px;}
+    .viewlist .c-spec{flex:1 1 auto;order:4;padding:0 8px;text-align:left;
+      display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .viewlist .spec-txt{font-size:11.5px;text-align:left;}
+    .viewlist .spec-etc{margin-top:0;font-size:10.5px;}
+    .viewlist .spec-btn{margin-top:0;}
+    .viewlist .c-pkg{flex:0 0 auto;order:5;padding:0 6px 0 0;}
+    .viewlist .pkg-txt{font-size:10.5px;}
+    .viewlist .c-price{flex:0 0 auto;order:6;margin-left:auto;padding:0;}
+    .viewlist .p-mem{font-size:14px;}
+    .viewlist .c-act{flex:0 0 auto;order:7;padding-left:4px;}
+
+    /* 펼친 규격 행도 같은 규칙 */
+    .m-acc .kid .c-comp,.m-acc .kid .c-cat,.m-acc .kid .nm{display:none;}
+    .m-acc .kid .c-spec{padding-left:10px;}
+    .m-table .kid .c-cat,.m-table .kid .c-comp,.m-table .kid .nm{display:none;}
+
+    /* 앨범형: 2열 */
+    .grid.viewgrid{grid-template-columns:repeat(2,1fr);gap:9px;}
+
+    /* 상단바: 검색창 한 줄, 나머지 한 줄 */
+    .search{flex-wrap:wrap;gap:6px;}
+    .search input{flex:1 1 100%;height:40px;font-size:14px;}
+    .search select{flex:1 1 auto;height:36px;font-size:12px;}
+    .favbtn{height:36px;padding:0 10px;}
+    .viewtoggle{border-radius:9px;}
+    .viewtoggle button{width:34px;height:36px;}
+    header .logo-mark{width:34px;height:34px;flex:0 0 34px;font-size:16px;}
+    .logo-text{font-size:14px;}
+  }
+
   .empty{padding:70px 0;text-align:center;color:var(--muted);font-size:14px;}
   #sentinel{height:1px;}
   .loadmore{padding:24px 0;text-align:center;}
@@ -289,6 +344,11 @@
         <button id="catAll">전체 선택</button><button id="catNone">전체 해제</button>
       </div>
       <div class="cats" id="catChips"></div>
+
+      <div class="side-title" style="margin-top:16px;">회사 <b id="compSel"></b></div>
+      <input id="compQ" class="side-search" type="search" placeholder="회사 검색" autocomplete="off">
+      <div class="cats" id="compChips"></div>
+      <button class="lnk-clear" id="compClear" style="display:none;">회사 선택 해제</button>
     </div>
   </aside>
   </div><!-- /.left -->
@@ -487,8 +547,8 @@
   });
 
   // ----- 필터 칩 (쇼핑몰 / 카테고리) : 검색 결과에 맞춰 개수·목록 동적 갱신 -----
-  var fShop=new Set(), fCat=new Set();
-  var shopChipRefs=[], chipRefs=[];
+  var fShop=new Set(), fCat=new Set(), fComp=new Set();   // fComp: 비어있으면 전체
+  var shopChipRefs=[], chipRefs=[], compChipRefs=[];
   items.forEach(function(x){ fShop.add(x.shop); fCat.add(x.cat1||'기타'); });
 
   function renderChips(contId, counts, sel, refs, labelFn, sortFn){
@@ -508,22 +568,50 @@
     });
   }
   // 패싯: 자기 축은 제외하고 다른 필터만 적용한 개수 (표준 패싯 방식)
+  var COMP_TOP=15;
   function updateFacets(base){
-    var shopCounts={}, catCounts={};
+    var shopCounts={}, catCounts={}, compCounts={};
     base.forEach(function(x){
-      var c=x.cat1||'기타';
-      if(fCat.has(c)) shopCounts[x.shop]=(shopCounts[x.shop]||0)+1;
-      if(fShop.has(x.shop)) catCounts[c]=(catCounts[c]||0)+1;
+      var c=x.cat1||'기타', co=x.company||'';
+      var okShop=fShop.has(x.shop), okCat=fCat.has(c), okComp=(fComp.size===0||fComp.has(co));
+      if(okCat&&okComp)  shopCounts[x.shop]=(shopCounts[x.shop]||0)+1;
+      if(okShop&&okComp) catCounts[c]=(catCounts[c]||0)+1;
+      if(okShop&&okCat&&co) compCounts[co]=(compCounts[co]||0)+1;
     });
     renderChips('shopChips', shopCounts, fShop, shopChipRefs,
       function(v){return SHOPS[v]||v;}, function(m){return function(a,b){return m[b]-m[a];};});
     renderChips('catChips', catCounts, fCat, chipRefs,
       function(v){return v;}, function(m){return function(a,b){return m[b]-m[a];};});
+
+    // 회사: 수가 많아 상위 N개 + 검색어 일치 + 이미 선택된 것만 표시
+    var cq=norm(document.getElementById('compQ').value||'');
+    var names=Object.keys(compCounts);
+    if(cq) names=names.filter(function(v){return norm(v).indexOf(cq)!==-1;});
+    names.sort(function(a,b){return compCounts[b]-compCounts[a];});
+    var show=names.slice(0,COMP_TOP);
+    fComp.forEach(function(v){ if(show.indexOf(v)===-1) show.unshift(v); });
+    var shown={}; show.forEach(function(v){ shown[v]=compCounts[v]||0; });
+    renderChips('compChips', shown, fComp, compChipRefs,
+      function(v){return v;}, function(m){return function(a,b){return m[b]-m[a];};});
+    var moreN=names.length-COMP_TOP;
+    if(moreN>0){
+      var el=document.createElement('div');
+      el.className='spec-etc'; el.style.textAlign='left'; el.style.padding='3px 9px';
+      el.textContent='… 외 '+moreN+'개 (검색으로 찾기)';
+      document.getElementById('compChips').appendChild(el);
+    }
+    document.getElementById('compSel').textContent=fComp.size?fComp.size+'개 선택':'';
+    document.getElementById('compClear').style.display=fComp.size?'block':'none';
   }
   document.getElementById('catAll').addEventListener('click',function(){
     items.forEach(function(x){fCat.add(x.cat1||'기타');}); apply();});
   document.getElementById('catNone').addEventListener('click',function(){
     fCat.clear(); apply();});
+  (function(){
+    var cq=document.getElementById('compQ'), t2=null;
+    cq.addEventListener('input',function(){ if(t2)clearTimeout(t2); t2=setTimeout(apply,150); });
+    document.getElementById('compClear').addEventListener('click',function(){ fComp.clear(); apply(); });
+  })();
 
   // 모바일 접이식 사이드바 (기본 접힘)
   document.getElementById('sideToggle').addEventListener('click',function(){
@@ -598,7 +686,10 @@
     var base=items.filter(function(x){return baseMatch(x,tokens);});
     updateFacets(base);
     filtered=base.filter(function(x){
-      return fShop.has(x.shop) && fCat.has(x.cat1||'기타');
+      if(!fShop.has(x.shop)) return false;
+      if(!fCat.has(x.cat1||'기타')) return false;
+      if(fComp.size && !fComp.has(x.company||'')) return false;
+      return true;
     });
     // 그룹 대표 재계산 (현재 결과 기준)
     grep={};
