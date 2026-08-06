@@ -398,12 +398,23 @@
   function norm(s){return(s||'').toLowerCase().replace(SEP_RX_G,'');}
 
   var SHOPS={edent:'이덴트', seil:'세일글로벌'};
+  // 용량 절약: url과 이덴트 이미지는 데이터에 싣지 않고 id로 계산
+  function mkUrl(x){
+    return x.shop==='seil'
+      ? 'https://www.seilglobal.co.kr/shop/shopdetail.html?branduid='+x.id
+      : 'https://www.edent.co.kr/shop/item.php?pd_idx='+x.id;
+  }
+  function mkImg(x){
+    return x.img || 'https://www.edent.co.kr/data/product/img_m1_'+x.id;
+  }
   items.forEach(function(x){
     // 필드 정규화 (과거 스키마 origin → company, 샵 기본값)
     x.shop=x.shop||'edent';
     x.company=x.company||x.origin||'';
     x.country=x.country||'';
     if((!x.name||/^\s*$/.test(x.name)) && x.spec) x.name=x.spec;   // 이름 공백 방어
+    x.url=x.url||mkUrl(x);
+    x.img=mkImg(x);
     // 상품명 끝에 규격이 중복으로 붙어 있으면 잘라냄 (목록 원본이 이름+규격 결합 형태)
     if(x.spec && x.name){
       var sp=x.spec.trim(), nmT=x.name.replace(/\s+$/,'');
@@ -628,7 +639,9 @@
   var SVG_SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
   var SVG_HEART='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
 
-  function bigImg(x){return 'https://www.edent.co.kr/data/product/img_b1_'+x.id;}
+  function bigImg(x){
+    return x.shop==='seil' ? x.img : 'https://www.edent.co.kr/data/product/img_b1_'+x.id;
+  }
   function thumbHTML(x){
     return '<div class="thumb act-img" data-big="'+esc(bigImg(x))+'" data-fallback="'+esc(x.img)+'" title="사진 크게 보기">'+
       '<img loading="lazy" src="'+esc(x.img)+'" alt="" '+

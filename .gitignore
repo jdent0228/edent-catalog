@@ -5,3 +5,5 @@ Thumbs.db
 .idea/
 .claude/
 secret.local.ps1
+
+data.json

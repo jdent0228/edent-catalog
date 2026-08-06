@@ -62,7 +62,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.json data.js data-edent.json data-seil.json company-map.json keywords-map.json
+          git add data.js data-edent.json data-seil.json company-map.json keywords-map.json
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 생략"
           else
