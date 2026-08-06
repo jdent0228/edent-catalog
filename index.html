@@ -153,13 +153,25 @@
   .m-acc .kid .thumb{width:30px;height:30px;opacity:.8;}
   .m-acc .kid .c-spec .spec-txt{font-weight:600;color:var(--text);}
 
-  /* 규격 열: 대표규격 / 외 N / 더보기 */
-  .spec-etc{font-size:11px;color:var(--muted);margin-top:1px;}
+  /* 규격 열: 대표규격 / 외 N / 펼침버튼 — 모두 가운데 정렬 */
+  .viewlist .c-spec{text-align:center;}
+  .spec-etc{font-size:11px;color:var(--muted);margin-top:1px;text-align:center;}
   .spec-btn{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;color:var(--blue);
-    background:var(--blue-soft);border-radius:5px;padding:1px 9px;cursor:pointer;user-select:none;}
+    background:var(--blue-soft);border-radius:5px;padding:1px 9px;cursor:pointer;user-select:none;
+    line-height:17px;}
   .spec-btn:hover{background:var(--blue);color:#fff;}
   .grp.open .spec-btn{background:var(--panel);color:var(--muted-2);}
   .grp.open .spec-btn:hover{background:var(--line-strong);color:var(--text);}
+
+  /* 펼침 버튼 스타일 변형 */
+  .xs-chev .spec-btn,.xs-chev2 .spec-btn,.xs-dots .spec-btn{
+    background:none;color:var(--muted);padding:0 8px;font-size:13px;letter-spacing:-1px;}
+  .xs-chev .spec-btn:hover,.xs-chev2 .spec-btn:hover,.xs-dots .spec-btn:hover{
+    background:var(--blue-soft);color:var(--blue);}
+  .xs-chev2 .spec-btn{line-height:9px;padding:3px 8px;}
+  .xs-count .spec-btn{background:none;border:1px solid var(--line);color:var(--muted-2);padding:0 8px;}
+  .xs-count .spec-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft);}
+  .grp.open .xs-chev .spec-btn,.grp.open .xs-chev2 .spec-btn{color:var(--blue);}
 
   /* 그룹 요약(가격 범위/규격 수) */
   .grange{font-size:10.5px;color:var(--muted);font-weight:500;}
@@ -290,6 +302,13 @@
         <option value="table">표형</option>
         <option value="chips">규격칩</option>
         <option value="flat">전체 나열</option>
+      </select>
+      <select id="expStyle" title="펼침 버튼 모양">
+        <option value="chev">⌄ 화살표</option>
+        <option value="chev2">⌄⌄ 이중화살표</option>
+        <option value="count">⌄ 4 화살표+개수</option>
+        <option value="dots">⋯ 점</option>
+        <option value="text">더보기 글자</option>
       </select>
       <button class="favbtn" id="favFilter" title="즐겨찾기만 보기">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -506,8 +525,16 @@
 
   // ----- 필터/정렬 -----
   var q='', sortKey='name', sortDir=1;      // dir 1=오름차순, -1=내림차순
-  var groupMode='table';                     // table | chips | acc | flat
+  var groupMode='acc';                       // table | chips | acc | flat
+  var expStyle='chev';                       // chev | chev2 | count | dots | text
   var expanded=new Set();                    // 펼친 그룹 키
+  function expHTML(n,open){
+    if(expStyle==='text')  return open?'접기':'더보기';
+    if(expStyle==='chev2') return open?'⌃⌃':'⌄⌄';
+    if(expStyle==='count') return open?'⌃':'⌄ '+n;
+    if(expStyle==='dots')  return open?'⌃':'⋯';
+    return open?'⌃':'⌄';
+  }
   var itemByKey={};                          // _key → 상품 (칩 클릭 등에서 조회)
   items.forEach(function(x){itemByKey[x._key]=x;});
   var grid=document.getElementById('grid'), empty=document.getElementById('empty'),
@@ -749,7 +776,7 @@
       '<div class="c-spec">'+
         '<div class="spec-txt">'+(lead.spec?hl(lead.spec):'기본')+'</div>'+
         '<div class="spec-etc">외 '+(n-1)+'</div>'+
-        '<div class="spec-btn" data-toggle="1">'+(open?'접기':'더보기')+'</div></div>'+
+        '<div class="spec-btn" data-toggle="1" data-n="'+(n-1)+'">'+expHTML(n-1,open)+'</div></div>'+
       '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
       '<div class="c-price">'+priceHTML(lead)+'</div>'+
       '<div class="c-act">'+actHTML(lead)+favBtnHTML(lead)+'</div></div>';
@@ -826,7 +853,7 @@
         var isOpen=grp.classList.contains('open');
         if(isOpen) expanded.add(grp.dataset.gk); else expanded.delete(grp.dataset.gk);
         var btn=grp.querySelector('.spec-btn');
-        if(btn) btn.textContent=isOpen?'접기':'더보기';
+        if(btn) btn.textContent=expHTML(parseInt(btn.dataset.n||'0',10),isOpen);
       }
       return;
     }
@@ -878,12 +905,28 @@
     try{localStorage.setItem('edent_gmode',groupMode);}catch(err){}
     apply();
   });
+  // 펼침 버튼 모양
+  function setExpStyle(v){
+    expStyle=v;
+    grid.classList.remove('xs-chev','xs-chev2','xs-count','xs-dots','xs-text');
+    grid.classList.add('xs-'+v);
+  }
+  document.getElementById('expStyle').addEventListener('change',function(e){
+    setExpStyle(e.target.value);
+    try{localStorage.setItem('edent_xstyle',expStyle);}catch(err){}
+    apply();
+  });
   (function(){
     var gm='acc';
     try{ gm=localStorage.getItem('edent_gmode')||'acc'; }catch(err){}
     if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='acc';
     document.getElementById('groupMode').value=gm;
     setGroupMode(gm);
+    var xs='chev';
+    try{ xs=localStorage.getItem('edent_xstyle')||'chev'; }catch(err){}
+    if(['chev','chev2','count','dots','text'].indexOf(xs)===-1) xs='chev';
+    document.getElementById('expStyle').value=xs;
+    setExpStyle(xs);
   })();
 
   // 머릿행 클릭 정렬 (같은 열 재클릭 → 오름/내림 전환)

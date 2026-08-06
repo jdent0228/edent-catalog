@@ -84,8 +84,9 @@ function Parse-SeilList([string]$html) {
       elseif ($img.StartsWith('/')) { $img = $Base + $img }
     }
 
+    # 세일글로벌의 'prd-standard(규격)'은 실제로는 포장단위(EA, Set, pkg/5EA …)
     $out.Add([pscustomobject]@{
-      id = $bid; name = $nm; spec = $spec; company = $brand; code = $code
+      id = $bid; name = $nm; pkg = $spec; spec = ''; company = $brand; code = $code
       priceList = $pList; priceSell = $pSell; img = $img
     })
   }
@@ -125,7 +126,7 @@ foreach ($xc in $xcodes) {
         cat1 = $c1; cat2 = ''; catLeaf = ''; cats = @($c1)
         img = $p.img
         url = "$Base/shop/shopdetail.html?branduid=$($p.id)"
-        pkg = ''; gid = ''; hasGroup = $false; code = $p.code
+        pkg = $p.pkg; gid = ''; hasGroup = $false; code = $p.code
         shop = 'seil'
       }
     }
@@ -135,6 +136,73 @@ foreach ($xc in $xcodes) {
   }
   Write-Host "  [$ci/$($xcodes.Count)] $c1 (xcode=$xc) 누적 $($items.Count)"
 }
+
+# ================= 3.5 상품명에서 규격 분리 (이덴트와 동일 구조로) =================
+# 세일글로벌은 규격 필드가 따로 없고 상품명에 규격이 붙어 있다.
+#   예) "토마스 게이트 바 32mm" / "토마스 게이트 바 25mm"
+# 같은 회사의 상품명들을 비교해 '공통 접두어(=진짜 상품명)'와 '뒤에 남는 부분(=규격)'을 찾는다.
+# 규칙 기반 추측이 아니라, 실제 데이터에서 2개 이상이 공유하는 접두어만 인정한다.
+function Common-Prefix([string]$a, [string]$b) {
+  $n = [Math]::Min($a.Length, $b.Length); $i = 0
+  while ($i -lt $n -and $a[$i] -eq $b[$i]) { $i++ }
+  $a.Substring(0, $i)
+}
+function Trim-AtWord([string]$s) {
+  # 단어/구분자 경계에서 자름 (낱말 중간에서 끊기지 않도록)
+  $t = $s.TrimEnd()
+  $m = [regex]::Match($t, '^(.*[\s\(\[\-/,])[^\s\(\[\-/,]*$')
+  if ($m.Success -and $m.Groups[1].Value.Trim().Length -ge 6) { return $m.Groups[1].Value.TrimEnd(" ", "(", "[", "-", "/", ",") }
+  return $t
+}
+
+$byCompany = @{}
+foreach ($it in $items.Values) {
+  $ck = if ($it.company) { $it.company } else { '(무)' }
+  if (-not $byCompany.ContainsKey($ck)) { $byCompany[$ck] = [System.Collections.Generic.List[object]]::new() }
+  $byCompany[$ck].Add($it)
+}
+$specSet = 0; $groupSet = 0
+foreach ($ck in $byCompany.Keys) {
+  $arr = @($byCompany[$ck] | Sort-Object name)
+  $i = 0
+  while ($i -lt $arr.Count) {
+    # 연속한 상품들과 공통 접두어를 공유하는 구간을 묶음
+    $j = $i + 1; $pref = $null
+    while ($j -lt $arr.Count) {
+      $cp = Common-Prefix $arr[$i].name $arr[$j].name
+      $cp = Trim-AtWord $cp
+      $minLen = [Math]::Min($arr[$i].name.Length, $arr[$j].name.Length)
+      if ($cp.Length -ge 8 -and $cp.Length -ge ($minLen * 0.5)) {
+        if ($null -eq $pref -or $cp.Length -lt $pref.Length) { $pref = $cp }
+        $j++
+      } else { break }
+    }
+    $cnt = $j - $i
+    if ($cnt -ge 2 -and $pref) {
+      # 남는 꼬리가 너무 길면(=사실상 다른 상품) 규격으로 보지 않음
+      $tails = @(); $ok = $true
+      for ($k = $i; $k -lt $j; $k++) {
+        $tail = $arr[$k].name.Substring([Math]::Min($pref.Length, $arr[$k].name.Length)).Trim()
+        $tail = $tail.TrimStart(" ", ",", "-", "/", "(", "[")
+        if ($tail.Length -gt 30) { $ok = $false; break }
+        $tails += $tail
+      }
+      if ($ok) {
+        $gid = $arr[$i].id
+        for ($k = $i; $k -lt $j; $k++) {
+          $t = $tails[$k - $i]
+          if ($t) { $arr[$k].spec = $t; $specSet++ }
+          $arr[$k].name = $pref
+          $arr[$k].gid = $gid
+        }
+        $arr[$i].hasGroup = $true
+        $groupSet++
+      }
+    }
+    $i = $j
+  }
+}
+Write-Host "규격 분리: $specSet개 상품 / 그룹 $groupSet개"
 
 # ================= 4. 안전장치 + 출력 =================
 # 크롤이 사실상 실패했는데 좋은 데이터를 덮어쓰는 것을 막는다.
