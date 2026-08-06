@@ -81,22 +81,27 @@
     border:1px solid var(--line-strong);border-radius:6px;padding:4px 0;cursor:pointer;}
   .lnk-clear:hover{background:var(--hover);color:var(--text);}
 
-  /* 좌측 필터 → 접이식 (기본 접힘) */
+  /* 좁은 화면: 좌측 필터를 슬라이드 드로어로 (상단에 박스를 만들지 않음) */
   @media (max-width:1200px){
-    /* 세로 배치에서는 stretch 로 (flex-start 면 본문이 내용 폭만큼만 차지해 우측이 빔) */
     .layout{flex-direction:column;gap:10px;margin-top:10px;align-items:stretch;}
     .left{flex:none;width:100%;gap:10px;}
     .main{width:100%;}
-    .side{position:static;width:100%;max-height:none;padding:0;overflow:visible;}
+    .search .filterbtn{display:flex;}   /* 뒤에 오는 기본 규칙보다 우선하도록 선택자 강화 */
+
+    .side{position:fixed;left:0;top:0;bottom:0;z-index:110;
+      width:min(88vw,300px);max-height:none;overflow-y:auto;
+      background:#fff;border:0;border-radius:0;padding:0 14px 24px;
+      box-shadow:2px 0 26px rgba(0,0,0,.20);
+      transform:translateX(-101%);transition:transform .22s ease;}
+    .side.open{transform:none;}
     .side-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;
-      background:none;border:none;cursor:pointer;padding:11px 14px;font-size:13px;font-weight:700;
-      color:var(--text);}
+      background:#fff;border:none;border-bottom:1px solid var(--line);cursor:pointer;
+      padding:15px 2px;font-size:14px;font-weight:800;color:var(--text);
+      position:sticky;top:0;z-index:2;}
     .side-toggle b{color:var(--blue);font-weight:700;margin-left:4px;}
-    .side-toggle i{font-style:normal;color:var(--muted);transition:transform .15s;}
-    .side.open .side-toggle i{transform:rotate(180deg);}
-    .side-body{display:none;padding:0 14px 14px;}
-    .side.open .side-body{display:block;}
-    .side-title{display:none;}
+    .side-toggle i{font-style:normal;color:var(--muted);font-size:16px;}
+    .side-body{display:block;padding:10px 0 0;}
+    .side-title{display:block;}
   }
 
   /* 회사 칩 바 (검색 결과 수 아래) — 어떤 폭에서도 항상 한 줄, 넘치면 전체보기 모달 */
@@ -104,11 +109,21 @@
     flex-wrap:nowrap;overflow:hidden;}
   .compbar.on{display:flex;}
 
-  /* 목록 우측 상단 뷰 전환 */
-  .toolrow{display:flex;justify-content:flex-end;padding:0 0 7px;}
-  .toolrow .viewtoggle{border-radius:9px;}
+  /* 회사 칩 + 뷰 전환: 항상 같은 한 행 */
+  .toolrow{display:flex;align-items:center;gap:10px;padding:0 0 7px;}
+  .toolrow .compbar{flex:1 1 auto;min-width:0;padding:0;}
+  .toolrow .viewtoggle{flex:0 0 auto;border-radius:9px;}
   .toolrow .viewtoggle button{width:36px;height:30px;}
   .toolrow .viewtoggle svg{width:16px;height:16px;}
+
+  /* 필터 버튼 (좁은 화면에서만 노출) */
+  .filterbtn{display:none;position:relative;}
+  .filterbtn svg{width:17px;height:17px;}
+  #filterDot{display:none;position:absolute;top:6px;right:6px;width:7px;height:7px;
+    border-radius:50%;background:var(--red);}
+  #filterDot.on{display:block;}
+  #sideBack{position:fixed;inset:0;background:rgba(17,20,24,.42);z-index:105;display:none;}
+  #sideBack.show{display:block;}
   .compbar .lbl{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--muted);
     align-self:center;padding-right:2px;}
   .cpill{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -411,16 +426,16 @@
     /* 공유·하트: 박스 우상단 */
     .viewlist .card:not(.kid) .c-act{position:absolute;right:7px;top:6px;padding:0;}
 
-    /* 더보기: 파란 이중 화살표(가로로 넓게), 규격 행과 살짝 겹치게 */
-    .viewlist .card.lead{padding-bottom:16px;}
+    /* 더보기: 톤다운 블루 이중 화살표(가로로 넓게), 규격 행과 살짝 겹치게 */
+    .viewlist .card.lead{padding-bottom:20px;}
     .viewlist .card.lead .spec-btn{position:absolute;left:50%;transform:translateX(-50%);
-      bottom:1px;margin:0;padding:0;background:none;font-size:0;line-height:0;border-radius:6px;
-      width:46px;height:15px;display:flex;align-items:center;justify-content:center;}
+      bottom:2px;margin:0;padding:0;background:none;font-size:0;line-height:0;border-radius:6px;
+      width:48px;height:17px;display:flex;align-items:center;justify-content:center;}
     .viewlist .card.lead .spec-btn::after{
-      content:'';display:block;width:42px;height:13px;transition:transform .15s;
-      background:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 14' fill='none' stroke='%233182f6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 2.5 L21 9.5 L37 2.5'/%3E%3Cpath d='M5 7.5 L21 14.5 L37 7.5'/%3E%3C/svg%3E") no-repeat center/contain;}
+      content:'';display:block;width:42px;height:16px;transition:transform .15s;
+      background:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 16' fill='none' stroke='%238da9cc' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3 L21 9 L37 3'/%3E%3Cpath d='M5 8 L21 14 L37 8'/%3E%3C/svg%3E") no-repeat center/contain;}
     .viewlist .grp.open .lead .spec-btn::after{transform:rotate(180deg);}
-    .viewlist .card.lead .spec-btn:active::after{opacity:.6;}
+    .viewlist .card.lead .spec-btn:active::after{opacity:.55;}
 
     /* 펼친 규격 행: 규격 | 가격 | 아이콘 */
     .m-acc .kid .c-comp,.m-acc .kid .c-cat,.m-acc .kid .nm{display:none;}
@@ -491,14 +506,18 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
         <span id="favCount">0</span>
       </button>
+      <button class="favbtn filterbtn" id="filterBtn" title="필터">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+        <span id="filterDot"></span>
+      </button>
     </div>
   </div>
 
   <div class="count">검색 결과 <b id="resultCount">0</b>개</div>
 
-  <div class="compbar" id="compBar"></div>
-
   <div class="toolrow">
+    <div class="compbar" id="compBar"></div>
     <div class="viewtoggle">
       <button id="viewListBtn" title="목록형" aria-label="목록형">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -534,6 +553,7 @@
   </div><!-- /.layout -->
 </div>
 <div id="toast"></div>
+<div id="sideBack"></div>
 <div id="imgModal"><img id="imgModalPic" alt=""></div>
 <div id="compModal">
   <div class="cm-box">
@@ -855,10 +875,23 @@
     document.getElementById('compClear').addEventListener('click',function(){ fComp.clear(); apply(); });
   })();
 
-  // 모바일 접이식 사이드바 (기본 접힘)
-  document.getElementById('sideToggle').addEventListener('click',function(){
-    document.getElementById('side').classList.toggle('open');
+  // 좁은 화면: 좌측 필터 드로어
+  var sideEl=document.getElementById('side'), sideBack=document.getElementById('sideBack');
+  function openSide(){ sideEl.classList.add('open'); sideBack.classList.add('show'); }
+  function closeSide(){ sideEl.classList.remove('open'); sideBack.classList.remove('show'); }
+  document.getElementById('filterBtn').addEventListener('click',function(){
+    sideEl.classList.contains('open')?closeSide():openSide();
   });
+  document.getElementById('sideToggle').addEventListener('click',closeSide);
+  sideBack.addEventListener('click',closeSide);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSide(); });
+  // 필터가 기본값과 다르면 버튼에 점 표시
+  var ALL_CATS=new Set(); items.forEach(function(x){ ALL_CATS.add(x.cat1||'기타'); });
+  function updateFilterDot(){
+    var changed=(fComp.size>0) || (fCat.size!==ALL_CATS.size) ||
+                (fShop.size!==1) || !fShop.has('edent') || favOnly;
+    document.getElementById('filterDot').classList.toggle('on',changed);
+  }
   function updateCatSel(){
     var el=document.getElementById('catSel');
     if(el) el.textContent=fCat.size+'/'+chipRefs.length;
@@ -1152,6 +1185,7 @@
   function apply(){
     compute();
     updateCatSel();
+    updateFilterDot();
     grid.innerHTML=''; shown=0;
     empty.style.display=filtered.length?'none':'block';
     renderMore();
