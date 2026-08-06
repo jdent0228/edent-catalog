@@ -426,16 +426,22 @@
     /* 공유·하트: 박스 우상단 */
     .viewlist .card:not(.kid) .c-act{position:absolute;right:7px;top:6px;padding:0;}
 
-    /* 더보기: 톤다운 블루 이중 화살표(가로로 넓게), 규격 행과 살짝 겹치게 */
-    .viewlist .card.lead{padding-bottom:20px;}
+    /* 더보기: "규격 더보기 ⌄" 형태, 규격 행과 살짝 겹치게 */
+    .viewlist .card.lead{padding-bottom:23px;}
     .viewlist .card.lead .spec-btn{position:absolute;left:50%;transform:translateX(-50%);
-      bottom:2px;margin:0;padding:0;background:none;font-size:0;line-height:0;border-radius:6px;
-      width:48px;height:17px;display:flex;align-items:center;justify-content:center;}
+      bottom:3px;margin:0;width:auto;height:auto;
+      display:flex;align-items:center;gap:4px;
+      font-size:11px;font-weight:600;line-height:17px;letter-spacing:-0.2px;
+      color:#7b93b3;background:#f2f6fb;border-radius:9px;padding:0 11px;}
+    .viewlist .card.lead .spec-btn::before{content:'규격';}
     .viewlist .card.lead .spec-btn::after{
-      content:'';display:block;width:42px;height:16px;transition:transform .15s;
-      background:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 16' fill='none' stroke='%238da9cc' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3 L21 9 L37 3'/%3E%3Cpath d='M5 8 L21 14 L37 8'/%3E%3C/svg%3E") no-repeat center/contain;}
-    .viewlist .grp.open .lead .spec-btn::after{transform:rotate(180deg);}
-    .viewlist .card.lead .spec-btn:active::after{opacity:.55;}
+      content:'';display:block;flex:0 0 auto;width:9px;height:6px;transition:transform .15s;
+      background:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%237b93b3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 2 L6 6.4 L10.5 2'/%3E%3C/svg%3E") no-repeat center/contain;}
+    .viewlist .grp.open .lead .spec-btn{color:var(--muted);background:var(--panel);}
+    /* 펼침 상태: 위 방향 화살표로 교체 (회전 대신 아이콘 자체를 바꿔 확실하게) */
+    .viewlist .grp.open .lead .spec-btn::after{
+      background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%238b95a1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 6 L6 1.6 L10.5 6'/%3E%3C/svg%3E");}
+    .viewlist .card.lead .spec-btn:active{background:#e6eef8;color:var(--blue);}
 
     /* 펼친 규격 행: 규격 | 가격 | 아이콘 */
     .m-acc .kid .c-comp,.m-acc .kid .c-cat,.m-acc .kid .nm{display:none;}
