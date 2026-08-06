@@ -82,8 +82,10 @@
 
   /* 좌측 필터 → 접이식 (기본 접힘) */
   @media (max-width:1200px){
-    .layout{flex-direction:column;gap:10px;margin-top:10px;}
+    /* 세로 배치에서는 stretch 로 (flex-start 면 본문이 내용 폭만큼만 차지해 우측이 빔) */
+    .layout{flex-direction:column;gap:10px;margin-top:10px;align-items:stretch;}
     .left{flex:none;width:100%;gap:10px;}
+    .main{width:100%;}
     .side{position:static;width:100%;max-height:none;padding:0;overflow:visible;}
     .side-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;
       background:none;border:none;cursor:pointer;padding:11px 14px;font-size:13px;font-weight:700;
@@ -384,23 +386,31 @@
     .viewlist .c-main{flex:1 1 100%;order:2;padding:0;text-align:left;min-width:0;}
     .viewlist .nm{font-size:13.5px;}
 
-    .viewlist .c-comp{flex:0 1 auto;order:3;padding:0;text-align:left;min-width:0;}
+    /* 제조사·제조국을 한 줄로 (기본은 세로 2줄이라 모바일에선 가로로) */
+    .viewlist .c-comp{flex:0 1 auto;order:3;padding:0;text-align:left;min-width:0;
+      display:flex;align-items:center;gap:4px;align-self:center;}
     .viewlist .comp-txt{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .viewlist .comp-ct{display:inline;margin-left:4px;}
+    .viewlist .comp-ct{margin-top:0;white-space:nowrap;flex:0 0 auto;}
+    .viewlist .comp-ct::before{content:'·';margin-right:3px;color:var(--line-strong);}
     .viewlist .c-spec{flex:1 1 auto;order:4;padding:0;text-align:left;min-width:0;
-      display:flex;align-items:center;gap:5px;}
+      display:flex;align-items:center;gap:5px;align-self:center;}
     .viewlist .c-spec::before{content:'|';color:var(--line-strong);flex:0 0 auto;padding:0 2px;}
     .viewlist .spec-txt{font-size:11.5px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .viewlist .spec-etc{margin-top:0;font-size:10.5px;flex:0 0 auto;}
-    .viewlist .c-price{flex:0 0 auto;order:5;margin-left:auto;padding:0 0 0 8px;}
+    .viewlist .c-price{flex:0 0 auto;order:5;margin-left:auto;padding:0 0 0 8px;align-self:center;}
     .viewlist .p-mem{font-size:14px;}
 
     /* 공유·하트: 박스 우상단 */
     .viewlist .card:not(.kid) .c-act{position:absolute;right:7px;top:6px;padding:0;}
-    /* 더보기: 박스 최하단 중앙 */
-    .viewlist .card.lead{padding-bottom:30px;}
+
+    /* 더보기: 화살표만, 규격 행과 살짝 겹치게 (한 줄을 차지하지 않음) */
+    .viewlist .card.lead{padding-bottom:14px;}
     .viewlist .card.lead .spec-btn{position:absolute;left:50%;transform:translateX(-50%);
-      bottom:6px;margin:0;padding:2px 16px;}
+      bottom:0;margin:0;padding:0 16px;background:none;color:var(--muted);
+      font-size:0;line-height:13px;border-radius:6px;}
+    .viewlist .card.lead .spec-btn::after{content:'⌄';font-size:13px;line-height:13px;}
+    .viewlist .grp.open .lead .spec-btn::after{content:'⌃';}
+    .viewlist .card.lead .spec-btn:active{background:var(--panel);color:var(--blue);}
 
     /* 펼친 규격 행: 규격 | 가격 | 아이콘 */
     .m-acc .kid .c-comp,.m-acc .kid .c-cat,.m-acc .kid .nm{display:none;}
