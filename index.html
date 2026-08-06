@@ -240,9 +240,14 @@
   .m-acc .kids.scroll::-webkit-scrollbar{width:6px;}
   .m-acc .kids.scroll::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
 
-  /* 펼치면 대표행의 포장·가격은 '-' 로 (실제 값은 아래 목록에 있음) */
-  .lead .pdash{display:none;color:var(--muted);font-size:12px;}
-  .grp.open .lead .pv{display:none;}
+  /* 펼치면 대표행의 포장·가격은 '-' 로 (실제 값은 아래 목록에 있음)
+     단, 원래 값이 차지하던 자리는 그대로 유지해야 펼침/접힘 시 행 높이가 변하지 않는다 */
+  .lead .c-price,.lead .c-pkg{position:relative;}
+  .lead .pdash{display:none;color:var(--muted);font-size:12px;
+    position:absolute;top:50%;transform:translateY(-50%);}
+  .lead .c-price .pdash{right:0;}
+  .lead .c-pkg .pdash{left:50%;transform:translate(-50%,-50%);}
+  .grp.open .lead .pv{visibility:hidden;}     /* 공간은 유지 */
   .grp.open .lead .pdash{display:block;}
   .m-acc .kid{padding:4px 0;}
   .m-acc .kid+.kid{border-top:1px solid #f1f3f5;}
