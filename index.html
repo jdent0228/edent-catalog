@@ -112,7 +112,8 @@
   /* 회사 칩 + 뷰 전환: 항상 같은 한 행 */
   .toolrow{display:flex;align-items:center;gap:10px;padding:0 0 7px;}
   .toolrow .compbar{flex:1 1 auto;min-width:0;padding:0;}
-  .toolrow .viewtoggle{flex:0 0 auto;border-radius:9px;}
+  /* 회사 칩이 숨겨져도(검색 전) 항상 오른쪽 끝에 고정 */
+  .toolrow .viewtoggle{flex:0 0 auto;margin-left:auto;border-radius:9px;}
   .toolrow .viewtoggle button{width:36px;height:30px;}
   .toolrow .viewtoggle svg{width:16px;height:16px;}
 
