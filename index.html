@@ -20,10 +20,10 @@
   /* 좌측 사이드바 레이아웃 */
   .layout{display:flex;gap:22px;align-items:flex-start;margin-top:16px;}
   .left{flex:0 0 208px;display:flex;flex-direction:column;gap:12px;min-width:0;}
-  .logo-box{display:flex;gap:10px;align-items:flex-start;padding:6px 2px 0;}
-  .logo-mark{flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:var(--blue);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;}
-  .logo-text{font-size:15px;font-weight:800;letter-spacing:-0.3px;line-height:1.25;padding-top:1px;}
+  .logo-box{display:flex;gap:10px;align-items:flex-start;padding:6px 4px 0;cursor:pointer;
+    border-radius:9px;transition:.12s;}
+  .logo-box:hover{background:var(--panel);}
+  .logo-text{font-size:16px;font-weight:800;letter-spacing:-0.3px;line-height:1.25;padding-top:1px;}
   .logo-text .meta{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;line-height:1.5;}
   .logo-text .meta b{color:var(--muted-2);font-weight:600;}
   .warn{color:var(--red);font-size:12px;display:none;padding:0 2px;}
@@ -130,7 +130,16 @@
   .cm-col-h{font-size:12px;font-weight:800;color:var(--muted-2);padding:0 0 7px;
     border-bottom:1px solid var(--line);margin-bottom:8px;}
   .cm-col-h b{color:var(--blue);font-weight:700;font-size:11px;margin-left:3px;}
-  .cm-col-list{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;}
+  /* 회사 목록: 세로 나열 (가독성) */
+  .cm-col-list{display:flex;flex-direction:column;gap:1px;}
+  .cm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:6px 9px;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--text);
+    border:1px solid transparent;}
+  .cm-row:hover{background:var(--hover);border-color:var(--line);}
+  .cm-row .cn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cm-row i{font-style:normal;font-size:11px;color:var(--muted);flex:0 0 auto;}
+  .cm-row.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;}
+  .cm-row.on i{color:#cfe0ff;}
   .cm-none{color:var(--muted);font-size:12.5px;padding:6px 2px;}
   @media (max-width:560px){ .cm-body{grid-template-columns:1fr;} }
   .cm-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;
@@ -148,7 +157,7 @@
   .table-zone{overflow-x:auto;}
 
   /* 목록형 헤더 행 */
-  .lhead{display:flex;align-items:center;gap:0;min-width:920px;
+  .lhead{display:flex;align-items:center;gap:0;min-width:940px;
     background:var(--panel);border:1px solid var(--line-strong);border-radius:9px;
     font-size:12px;font-weight:700;color:var(--muted-2);padding:8px 0;margin-bottom:8px;}
   .lhead>div{text-align:center;}
@@ -239,8 +248,9 @@
   /* 그룹 요약(가격 범위/규격 수) */
   .grange{font-size:10.5px;color:var(--muted);font-weight:500;}
 
-  /* 컬럼 폭 (헤더/행 공통) */
-  .c-cat{flex:0 0 74px;padding:0 6px;}
+  /* 컬럼 폭 (헤더/행 공통) — min-width:0 이 없으면 긴 글자가 칸을 밀어내 폭이 제각각이 됨 */
+  .lhead>div,.viewlist .card>div{min-width:0;}
+  .c-cat{flex:0 0 74px;width:74px;padding:0 6px;}
   .c-comp{flex:0 0 92px;padding:0 6px;}
   .c-img{flex:0 0 56px;}
   .c-main{flex:1 1 auto;min-width:190px;padding:0 10px;text-align:center;}
@@ -283,7 +293,14 @@
     display:flex;flex-direction:row;align-items:center;transition:.12s;padding:6px 0;cursor:pointer;}
   .viewlist .card:hover{border-color:var(--line-strong);box-shadow:0 3px 12px rgba(0,0,0,.05);}
   .viewlist .thumb{width:46px;height:46px;border-radius:6px;margin:0 auto;cursor:zoom-in;}
-  .viewlist .c-cat{font-size:11px;color:var(--muted);word-break:keep-all;line-height:1.3;text-align:center;}
+  .viewlist .c-cat{font-size:11px;color:var(--muted);line-height:1.25;text-align:center;}
+  /* 2줄 넘어가면 … 로 줄임 (마우스 올리면 전체 툴팁) */
+  .cat-txt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    word-break:break-all;}
+  #tip{position:fixed;z-index:120;background:#2b2f36;color:#fff;font-size:12px;line-height:1.45;
+    padding:6px 10px;border-radius:7px;max-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.28);
+    display:none;pointer-events:none;word-break:keep-all;}
+  #tip.show{display:block;}
   .viewlist .c-comp{text-align:center;}
   .comp-txt{font-size:12px;color:var(--muted-2);word-break:keep-all;line-height:1.3;}
   .comp-ct{font-size:10.5px;color:var(--muted);margin-top:1px;}
@@ -383,9 +400,8 @@
 <div class="wrap">
   <div class="layout">
   <div class="left">
-  <div class="logo-box">
-    <div class="logo-mark">이</div>
-    <div class="logo-text">이덴트 카탈로그<span class="meta">총 <b id="totalCount">0</b>개 · <span id="genAt">-</span><br>자료 <a href="https://www.edent.co.kr" target="_blank" rel="noopener" style="color:var(--blue)">edent.co.kr</a></span></div>
+  <div class="logo-box" id="logoHome" title="처음 화면으로">
+    <div class="logo-text">Dent Aggregator<span class="meta">총 <b id="totalCount">0</b>개 · <span id="genAt">-</span></span></div>
   </div>
   <div class="warn" id="memWarn">⚠ 비로그인 크롤 데이터 — 회원가가 비어 있습니다.</div>
   <aside class="side" id="side">
@@ -413,12 +429,6 @@
   <div class="bar">
     <div class="search">
       <input id="q" type="search" placeholder="상품명·규격·코드 검색 (초성 가능)" autocomplete="off">
-      <select id="groupMode" title="같은 상품의 규격 묶음 표시 방식">
-        <option value="acc">규격 묶기 (기본)</option>
-        <option value="table">표형</option>
-        <option value="chips">규격칩</option>
-        <option value="flat">전체 나열</option>
-      </select>
       <button class="favbtn" id="favFilter" title="즐겨찾기만 보기">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
         <span id="favCount">0</span>
@@ -729,7 +739,10 @@
     en.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase(),'en');});
     function col(title,arr){
       return '<div class="cm-col"><div class="cm-col-h">'+title+' <b>'+arr.length+'</b></div>'+
-        (arr.length? '<div class="cm-col-list">'+arr.map(function(v){return pillHTML(v,lastCompCounts[v]||0);}).join('')+'</div>'
+        (arr.length? '<div class="cm-col-list">'+arr.map(function(v){
+             return '<div class="cm-row'+(fComp.has(v)?' on':'')+'" data-comp="'+esc(v)+'">'+
+               '<span class="cn">'+esc(v)+'</span><i>'+(lastCompCounts[v]||0)+'</i></div>';
+           }).join('')+'</div>'
                    : '<div class="cm-none">없음</div>')+'</div>';
     }
     cmList.innerHTML=(ko.length+en.length)
@@ -774,7 +787,7 @@
 
   // ----- 필터/정렬 -----
   var q='', sortKey='name', sortDir=1;      // dir 1=오름차순, -1=내림차순
-  var groupMode='acc';                       // table | chips | acc | flat
+  var groupMode='acc';                       // 규격 묶기 고정
   var expanded=new Set();                    // 펼친 그룹 키
   function expHTML(n,open){ return open?'접기':'더보기'; }
   var itemByKey={};                          // _key → 상품 (칩 클릭 등에서 조회)
@@ -908,14 +921,14 @@
   }
   function rowHTML(x,gn){
     return '<div class="card" data-url="'+esc(x.url)+'">'+
-      '<div class="c-cat">'+esc(x.cat1||'')+
-        '<br><span class="shop-tag shop-'+esc(x.shop)+'">'+esc(SHOPS[x.shop]||x.shop)+'</span></div>'+
+      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(x.cat1||'')+'">'+esc(x.cat1||'')+'</div>'+
+        '<span class="shop-tag shop-'+esc(x.shop)+'">'+esc(SHOPS[x.shop]||x.shop)+'</span></div>'+
       '<div class="c-img">'+thumbHTML(x)+'</div>'+
-      '<div class="c-comp"><div class="comp-txt">'+(x.company?hl(x.company):'-')+'</div>'+
+      '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(x.company||'')+'">'+(x.company?hl(x.company):'-')+'</div>'+
         (x.country?'<div class="comp-ct">'+esc(x.country)+'</div>':'')+'</div>'+
-      '<div class="c-main"><div class="nm">'+hl(x.name)+
+      '<div class="c-main"><div class="nm" data-tip="'+esc(x.name||'')+'">'+hl(x.name)+
         (gn>1?'<span class="gcount">규격 '+gn+'</span>':'')+'</div>'+codeHTML(x)+'</div>'+
-      '<div class="c-spec"><div class="spec-txt">'+(x.spec?hl(x.spec):'-')+'</div></div>'+
+      '<div class="c-spec"><div class="spec-txt" data-tip="'+esc(x.spec||'')+'">'+(x.spec?hl(x.spec):'-')+'</div></div>'+
       '<div class="c-pkg"><div class="pkg-txt">'+esc(x.pkg||'-')+'</div></div>'+
       '<div class="c-price">'+priceHTML(x)+'</div>'+
       '<div class="c-act">'+actHTML(x)+favBtnHTML(x)+'</div>'+
@@ -937,7 +950,7 @@
         favBtnHTML(x,'gfav')+
       '</div>'+
       '<div class="info">'+
-        '<div class="nm">'+hl(x.name)+'</div>'+
+        '<div class="nm" data-tip="'+esc(x.name||'')+'">'+hl(x.name)+'</div>'+
         codeHTML(x)+
         (subParts.length?'<div class="sub">'+subParts.join(' · ')+'</div>':'')+
         '<div class="foot"><div class="price">'+priceHTML(x)+'</div>'+
@@ -960,10 +973,10 @@
     var ms=g.ms, lead=ms[0], n=ms.length;
     if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
     var head='<div class="card lead" data-toggle="1">'+
-      '<div class="c-cat">'+esc(lead.cat1||'')+
-        '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div>'+
+        '<span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
-      '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
+      '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(lead.company||'')+'">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
       '<div class="c-main"><div class="nm"><span class="caret">▶</span>'+hl(lead.name)+
         '<span class="gcount">규격 '+n+'</span></div></div>'+
@@ -996,12 +1009,12 @@
     }).join('');
     if(n>LIM) chips+='<span class="specmore">+'+(n-LIM)+'</span>';
     return '<div class="card" data-url="'+esc(lead.url)+'">'+
-      '<div class="c-cat">'+esc(lead.cat1||'')+
-        '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div>'+
+        '<span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
-      '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
+      '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(lead.company||'')+'">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
-      '<div class="c-main"><div class="nm">'+hl(lead.name)+'<span class="gcount">규격 '+n+'</span></div></div>'+
+      '<div class="c-main"><div class="nm" data-tip="'+esc(lead.name||'')+'">'+hl(lead.name)+'<span class="gcount">규격 '+n+'</span></div></div>'+
       '<div class="c-spec">'+chips+'</div>'+
       '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
       '<div class="c-price">'+priceHTML(lead)+'</div>'+
@@ -1014,14 +1027,14 @@
     if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
     var open=expanded.has(g.gk);
     var head='<div class="card lead" data-url="'+esc(lead.url)+'">'+
-      '<div class="c-cat">'+esc(lead.cat1||'')+
-        '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
+      '<div class="c-cat"><div class="cat-txt" data-tip="'+esc(lead.cat1||'')+'">'+esc(lead.cat1||'')+'</div>'+
+        '<span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
-      '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
+      '<div class="c-comp"><div class="comp-txt" data-tip="'+esc(lead.company||'')+'">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
-      '<div class="c-main"><div class="nm">'+hl(lead.name)+'</div></div>'+
+      '<div class="c-main"><div class="nm" data-tip="'+esc(lead.name||'')+'">'+hl(lead.name)+'</div></div>'+
       '<div class="c-spec">'+
-        '<div class="spec-txt">'+(lead.spec?hl(lead.spec):'기본')+'</div>'+
+        '<div class="spec-txt" data-tip="'+esc(lead.spec||'')+'">'+(lead.spec?hl(lead.spec):'기본')+'</div>'+
         '<div class="spec-etc">외 '+(n-1)+'</div>'+
         '<div class="spec-btn" data-toggle="1" data-n="'+(n-1)+'">'+expHTML(n-1,open)+'</div></div>'+
       '<div class="c-pkg"><div class="pv"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
@@ -1035,7 +1048,7 @@
         '<div class="c-img">'+thumbHTML(m)+'</div>'+
         '<div class="c-comp"></div>'+
         '<div class="c-main"><div class="nm">.</div></div>'+
-        '<div class="c-spec"><div class="spec-txt">'+(m.spec?hl(m.spec):'기본')+'</div></div>'+
+        '<div class="c-spec"><div class="spec-txt" data-tip="'+esc(m.spec||'')+'">'+(m.spec?hl(m.spec):'기본')+'</div></div>'+
         '<div class="c-pkg"><div class="pkg-txt">'+esc(m.pkg||'-')+'</div></div>'+
         '<div class="c-price">'+priceHTML(m)+'</div>'+
         '<div class="c-act">'+actHTML(m)+favBtnHTML(m)+'</div></div>';
@@ -1065,6 +1078,25 @@
     renderMore();
     saveState();
   }
+
+  // ----- 말줄임 툴팁 (잘린 글자에만, 지연 없이 즉시) -----
+  var tipEl=document.createElement('div'); tipEl.id='tip'; document.body.appendChild(tipEl);
+  function hideTip(){ tipEl.classList.remove('show'); }
+  document.addEventListener('mouseover',function(e){
+    var el=e.target.closest('[data-tip]');
+    if(!el){ hideTip(); return; }
+    var full=el.getAttribute('data-tip');
+    // 실제로 잘린 경우에만 표시
+    if(!full || (el.scrollHeight<=el.clientHeight+1 && el.scrollWidth<=el.clientWidth+1)){ hideTip(); return; }
+    tipEl.textContent=full;
+    tipEl.classList.add('show');
+    var r=el.getBoundingClientRect(), tw=tipEl.offsetWidth, th=tipEl.offsetHeight;
+    var left=Math.min(Math.max(6, r.left+r.width/2-tw/2), window.innerWidth-tw-6);
+    var top=r.bottom+6; if(top+th>window.innerHeight-6) top=Math.max(6, r.top-th-6);
+    tipEl.style.left=left+'px'; tipEl.style.top=top+'px';
+  });
+  document.addEventListener('mouseout',function(e){ if(e.target.closest('[data-tip]')) hideTip(); });
+  window.addEventListener('scroll',hideTip,{passive:true});
 
   // ----- 이미지 확대 모달 -----
   var imgModal=document.getElementById('imgModal'), imgModalPic=document.getElementById('imgModalPic');
@@ -1166,18 +1198,19 @@
   // 화면 폭이 바뀌면 회사 칩 노출 개수 재계산
   (function(){var rt=null;window.addEventListener('resize',function(){
     if(rt)clearTimeout(rt);rt=setTimeout(function(){renderCompBar(lastCompCounts);},200);});})();
-  // 그룹 표시 방식
-  function setGroupMode(v){
-    groupMode=v;
-    grid.classList.remove('m-table','m-chips','m-acc');
-    if(v==='table') grid.classList.add('m-table');
-    else if(v==='chips') grid.classList.add('m-chips');
-    else if(v==='acc') grid.classList.add('m-acc');
-  }
-  document.getElementById('groupMode').addEventListener('change',function(e){
-    setGroupMode(e.target.value); expanded.clear();
-    try{localStorage.setItem('edent_gmode',groupMode);}catch(err){}
+  grid.classList.add('m-acc');   // 규격 묶기 고정
+
+  // 로고 클릭 → 처음 화면(모든 검색·필터 초기화)
+  document.getElementById('logoHome').addEventListener('click',function(){
+    q=''; qEl.value='';
+    favOnly=false; favFilterBtn.classList.remove('on');
+    fComp.clear(); document.getElementById('compQ').value='';
+    fShop=new Set(['edent']);
+    fCat=new Set(); items.forEach(function(x){ fCat.add(x.cat1||'기타'); });
+    expanded.clear();
+    sortKey='name'; sortDir=1; markSort();
     apply();
+    window.scrollTo({top:0,behavior:'smooth'});
   });
 
   // 머릿행 클릭 정렬 (같은 열 재클릭 → 오름/내림 전환)
@@ -1217,13 +1250,6 @@
   // ----- 초기화: 이전 화면 상태가 있으면 그대로 복원 -----
   (function(){
     var st=loadState();
-    var gm='acc';
-    try{ gm=localStorage.getItem('edent_gmode')||'acc'; }catch(e){}
-    if(st&&st.groupMode) gm=st.groupMode;
-    if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='acc';
-    document.getElementById('groupMode').value=gm;
-    setGroupMode(gm);
-
     var vw='list';
     try{ vw=localStorage.getItem(VIEW_KEY)||'list'; }catch(e){}
     if(st&&st.viewMode) vw=st.viewMode;
