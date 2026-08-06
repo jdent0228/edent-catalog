@@ -36,6 +36,22 @@ function Get-Html([string]$url) {
   return [System.Text.Encoding]::UTF8.GetString($bytes)   # UTF-8 강제(한글 깨짐 방지)
 }
 function Dec([string]$s) { [System.Net.WebUtility]::HtmlDecode($s).Trim() }
+
+# 규격 셀 다음의 '포장단위' 셀을 위치로 찾아낸다.
+# (형식이 5ea/pkg, 60 Pieces, 1 Box, Set … 로 제각각이라 패턴 매칭은 누락이 생김)
+function Get-PkgAfter([string]$reg, [int]$fromIdx) {
+  foreach ($m in [regex]::Matches($reg, '(?s)<td[^>]*>(.*?)</td>')) {
+    if ($m.Index -lt $fromIdx) { continue }
+    $t = (([System.Net.WebUtility]::HtmlDecode(($m.Groups[1].Value -replace '<[^>]+>', ' '))) -replace '\s+', ' ').Trim()
+    if (-not $t) { continue }
+    $t = ($t -split '개당')[0].Trim()          # "5ea/pkg 개당 1,760원" → "5ea/pkg"
+    if (-not $t) { continue }
+    if ($t.Length -gt 24) { return '' }        # 이름/설명 셀이면 포장 아님
+    if ($t -match '@' -or $t -match '원\s*$') { return '' }   # 가격 셀이면 포장 아님
+    return $t
+  }
+  return ''
+}
 function ToInt($s) { if ($s) { [int]((($s) -replace '[^\d]', '')) } else { $null } }
 
 # ================= 1. 세션 + 로그인 =================
@@ -124,9 +140,11 @@ function Parse-Products([string]$html) {
       if ($b -match $COUNTRY_RX) { $country = $b } else { $company = $b }
     }
 
-    # 포장단위 (메인그리드: "5ea/pkg")
+    # 포장단위: 규격 셀 바로 다음 셀 (형식이 다양해 위치로 판별)
     $pkgL = ''
-    if ($mid -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkgL = ($Matches[1] -replace '\s+', '') }
+    $sm2 = [regex]::Match($before, '<span class="impact">[^<]+</span>')
+    if ($sm2.Success) { $pkgL = Get-PkgAfter $mid ($sm2.Index + $sm2.Length) }
+    if (-not $pkgL -and $mid -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkgL = ($Matches[1] -replace '\s+', '') }
 
     # 규격: 이름~가격 사이 텍스트형 <span class="impact">규격</span>.
     # 즉시할인금액(Z_icon 뒤 "-0원" 등)을 규격으로 오인하지 않도록 Z_icon 이전 구간만 검색.
@@ -344,8 +362,11 @@ function Parse-GroupRows([string]$html) {
         $nm = $nm.TrimEnd().Substring(0, $nm.TrimEnd().Length - $spT2.Length).Trim()
       }
     }
+    # 포장단위: 규격 셀 다음 셀 (60 Pieces / 5ea/pkg / 1 Box …)
     $pkg = ''
-    if ($reg -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkg = ($Matches[1] -replace '\s+', '') }
+    $spm = [regex]::Match($reg, '<span class="impact">[^<]+</span>')
+    if ($spm.Success) { $pkg = Get-PkgAfter $reg ($spm.Index + $spm.Length) }
+    if (-not $pkg -and $reg -match '>\s*([0-9][^<>]{0,14}?/\s*pkg)') { $pkg = ($Matches[1] -replace '\s+', '') }
     $prices = [regex]::Matches($reg, '\d+@\s*([\d,]+)\s*원') | ForEach-Object { ToInt $_.Groups[1].Value }
     $pList = $null; $pMember = $null
     if ($prices.Count -ge 1) { $pList = $prices[0] }

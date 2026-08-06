@@ -125,7 +125,14 @@
   .cm-x{flex:0 0 auto;width:30px;height:30px;border:none;background:none;cursor:pointer;
     font-size:17px;color:var(--muted);border-radius:8px;}
   .cm-x:hover{background:var(--hover);color:var(--text);}
-  .cm-body{padding:12px 16px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;}
+  .cm-body{padding:12px 16px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;
+    align-items:start;}
+  .cm-col-h{font-size:12px;font-weight:800;color:var(--muted-2);padding:0 0 7px;
+    border-bottom:1px solid var(--line);margin-bottom:8px;}
+  .cm-col-h b{color:var(--blue);font-weight:700;font-size:11px;margin-left:3px;}
+  .cm-col-list{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;}
+  .cm-none{color:var(--muted);font-size:12.5px;padding:6px 2px;}
+  @media (max-width:560px){ .cm-body{grid-template-columns:1fr;} }
   .cm-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;
     padding:11px 16px;border-top:1px solid var(--line);background:var(--panel);}
   .cm-foot span{font-size:12px;color:var(--muted);}
@@ -191,6 +198,17 @@
   /* 펼친 규격 행: 대표행과 같은 열 위치를 그대로 사용 */
   .m-acc .kids{display:none;border-top:1px dashed var(--line);background:#fbfcfd;}
   .m-acc .grp.open .kids{display:block;}
+  /* 6행까지만 보이고 넘치면 스크롤 — 위아래를 흐리게 해 더 있음을 알림 */
+  .m-acc .grp.open .kids.scroll{max-height:212px;overflow-y:auto;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);
+            mask-image:linear-gradient(180deg,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);}
+  .m-acc .kids.scroll::-webkit-scrollbar{width:6px;}
+  .m-acc .kids.scroll::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
+
+  /* 펼치면 대표행의 포장·가격은 '-' 로 (실제 값은 아래 목록에 있음) */
+  .lead .pdash{display:none;color:var(--muted);font-size:12px;}
+  .grp.open .lead .pv{display:none;}
+  .grp.open .lead .pdash{display:block;}
   .m-acc .kid{padding:4px 0;}
   .m-acc .kid+.kid{border-top:1px solid #f1f3f5;}
   .m-acc .kid:hover{background:var(--hover);}
@@ -401,13 +419,6 @@
         <option value="chips">규격칩</option>
         <option value="flat">전체 나열</option>
       </select>
-      <select id="expStyle" title="펼침 버튼 모양">
-        <option value="chev">⌄ 화살표</option>
-        <option value="chev2">⌄⌄ 이중화살표</option>
-        <option value="count">⌄ 4 화살표+개수</option>
-        <option value="dots">⋯ 점</option>
-        <option value="text">더보기 글자</option>
-      </select>
       <button class="favbtn" id="favFilter" title="즐겨찾기만 보기">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
         <span id="favCount">0</span>
@@ -603,7 +614,10 @@
   // ----- 필터 칩 (쇼핑몰 / 카테고리) : 검색 결과에 맞춰 개수·목록 동적 갱신 -----
   var fShop=new Set(), fCat=new Set(), fComp=new Set();   // fComp: 비어있으면 전체
   var shopChipRefs=[], chipRefs=[], compChipRefs=[];
-  items.forEach(function(x){ fShop.add(x.shop); fCat.add(x.cat1||'기타'); });
+  // 기본값: 이덴트만 선택 (세일글로벌은 사용자가 켜서 봄)
+  items.forEach(function(x){ fCat.add(x.cat1||'기타'); });
+  fShop.add('edent');
+  if(!items.some(function(x){return x.shop==='edent';})) items.forEach(function(x){fShop.add(x.shop);});
 
   function renderChips(contId, counts, sel, refs, labelFn, sortFn){
     var cont=document.getElementById(contId);
@@ -682,11 +696,12 @@
     if(!searching || names.length<2){ bar.className='compbar'; bar.innerHTML=''; return; }
     bar.className='compbar on';
     var top=barTop();
-    var html='<span class="lbl">회사</span>';
+    var totalN=0; names.forEach(function(v){ totalN+=counts[v]||0; });
+    var html='<span class="lbl">회사</span>'+
+      '<span class="cpill'+(fComp.size===0?' on':'')+'" data-compclear="1">전체선택<i>'+names.length+'</i></span>';
     names.slice(0,top).forEach(function(v){ html+=pillHTML(v,counts[v]||0); });
     if(names.length>top)
       html+='<span class="cpill more" data-compall="1">전체보기<i>'+names.length+'</i></span>';
-    if(fComp.size) html+='<span class="cpill clear" data-compclear="1">선택 해제</span>';
     bar.innerHTML=html;
   }
   document.getElementById('compBar').addEventListener('click',function(e){
@@ -707,10 +722,19 @@
     var names=Object.keys(lastCompCounts);
     fComp.forEach(function(v){ if(names.indexOf(v)===-1) names.push(v); });
     if(qq) names=names.filter(function(v){return norm(v).indexOf(qq)!==-1;});
-    names.sort(function(a,b){return (lastCompCounts[b]||0)-(lastCompCounts[a]||0);});
-    cmList.innerHTML=names.length
-      ? names.map(function(v){return pillHTML(v,lastCompCounts[v]||0);}).join('')
-      : '<div style="color:var(--muted);font-size:13px;padding:14px 2px;">일치하는 회사가 없습니다.</div>';
+    // 국문(ㄱ~ㅎ) / 영문·기타(A~Z) 2열로 나누고 각각 가나다·알파벳순
+    var ko=[], en=[];
+    names.forEach(function(v){ (/^[가-힣]/.test(v.trim())?ko:en).push(v); });
+    ko.sort(function(a,b){return a.localeCompare(b,'ko');});
+    en.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase(),'en');});
+    function col(title,arr){
+      return '<div class="cm-col"><div class="cm-col-h">'+title+' <b>'+arr.length+'</b></div>'+
+        (arr.length? '<div class="cm-col-list">'+arr.map(function(v){return pillHTML(v,lastCompCounts[v]||0);}).join('')+'</div>'
+                   : '<div class="cm-none">없음</div>')+'</div>';
+    }
+    cmList.innerHTML=(ko.length+en.length)
+      ? col('ㄱ~ㅎ',ko)+col('A~Z',en)
+      : '<div class="cm-none">일치하는 회사가 없습니다.</div>';
     cmInfo.textContent='회사 '+names.length+'개'+(fComp.size?' · '+fComp.size+'개 선택':'');
   }
   function openCompModal(){ cmQ.value=''; renderCmList(); cmEl.classList.add('show'); cmQ.focus(); }
@@ -751,15 +775,8 @@
   // ----- 필터/정렬 -----
   var q='', sortKey='name', sortDir=1;      // dir 1=오름차순, -1=내림차순
   var groupMode='acc';                       // table | chips | acc | flat
-  var expStyle='chev';                       // chev | chev2 | count | dots | text
   var expanded=new Set();                    // 펼친 그룹 키
-  function expHTML(n,open){
-    if(expStyle==='text')  return open?'접기':'더보기';
-    if(expStyle==='chev2') return open?'⌃⌃':'⌄⌄';
-    if(expStyle==='count') return open?'⌃':'⌄ '+n;
-    if(expStyle==='dots')  return open?'⌃':'⋯';
-    return open?'⌃':'⌄';
-  }
+  function expHTML(n,open){ return open?'접기':'더보기'; }
   var itemByKey={};                          // _key → 상품 (칩 클릭 등에서 조회)
   items.forEach(function(x){itemByKey[x._key]=x;});
   var grid=document.getElementById('grid'), empty=document.getElementById('empty'),
@@ -1007,11 +1024,12 @@
         '<div class="spec-txt">'+(lead.spec?hl(lead.spec):'기본')+'</div>'+
         '<div class="spec-etc">외 '+(n-1)+'</div>'+
         '<div class="spec-btn" data-toggle="1" data-n="'+(n-1)+'">'+expHTML(n-1,open)+'</div></div>'+
-      '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
-      '<div class="c-price">'+priceHTML(lead)+'</div>'+
+      '<div class="c-pkg"><div class="pv"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
+        '<div class="pdash pkg-txt">-</div></div>'+
+      '<div class="c-price"><div class="pv">'+priceHTML(lead)+'</div><div class="pdash">-</div></div>'+
       '<div class="c-act">'+actHTML(lead)+favBtnHTML(lead)+'</div></div>';
-    // 대표(첫 규격)는 위에 이미 있으므로 나머지만 펼침
-    var kids=ms.slice(1).map(function(m){
+    // 펼치면 대표 규격을 포함한 전 규격을 목록으로 보여준다
+    var kids=ms.map(function(m){
       return '<div class="card kid" data-url="'+esc(m.url)+'">'+
         '<div class="c-cat"></div>'+
         '<div class="c-img">'+thumbHTML(m)+'</div>'+
@@ -1023,7 +1041,7 @@
         '<div class="c-act">'+actHTML(m)+favBtnHTML(m)+'</div></div>';
     }).join('');
     return '<div class="grp'+(open?' open':'')+'" data-gk="'+esc(g.gk)+'">'+
-      head+'<div class="kids">'+kids+'</div></div>';
+      head+'<div class="kids'+(n>6?' scroll':'')+'">'+kids+'</div></div>';
   }
   function groupHTML(g){
     if(viewMode!=='list') return g.ms.map(cardHTML).join('');
@@ -1045,6 +1063,7 @@
     grid.innerHTML=''; shown=0;
     empty.style.display=filtered.length?'none':'block';
     renderMore();
+    saveState();
   }
 
   // ----- 이미지 확대 모달 -----
@@ -1084,6 +1103,7 @@
         if(isOpen) expanded.add(grp.dataset.gk); else expanded.delete(grp.dataset.gk);
         var btn=grp.querySelector('.spec-btn');
         if(btn) btn.textContent=expHTML(parseInt(btn.dataset.n||'0',10),isOpen);
+        saveState();
       }
       return;
     }
@@ -1120,6 +1140,27 @@
   document.getElementById('loadmoreBtn').addEventListener('click',renderMore);
 
   // ----- 검색/정렬 -----
+  // ----- 새로고침해도 화면 상태 유지 (검색어·필터·정렬·펼침 등) -----
+  var ST_KEY='edent_state';
+  var stTimer=null;
+  function saveState(){
+    if(stTimer) clearTimeout(stTimer);
+    stTimer=setTimeout(function(){
+      try{
+        sessionStorage.setItem(ST_KEY, JSON.stringify({
+          q:q, sortKey:sortKey, sortDir:sortDir, groupMode:groupMode, viewMode:viewMode,
+          favOnly:favOnly, shop:Array.from(fShop), cat:Array.from(fCat), comp:Array.from(fComp),
+          compQ:(document.getElementById('compQ')||{}).value||'',
+          exp:Array.from(expanded), shown:shown, scroll:window.scrollY
+        }));
+      }catch(e){}
+    },150);
+  }
+  function loadState(){
+    try{ return JSON.parse(sessionStorage.getItem(ST_KEY)||'null'); }catch(e){ return null; }
+  }
+  window.addEventListener('scroll',saveState,{passive:true});
+
   var qEl=document.getElementById('q'), t=null;
   qEl.addEventListener('input',function(){q=qEl.value;if(t)clearTimeout(t);t=setTimeout(apply,160);});
   // 화면 폭이 바뀌면 회사 칩 노출 개수 재계산
@@ -1138,29 +1179,6 @@
     try{localStorage.setItem('edent_gmode',groupMode);}catch(err){}
     apply();
   });
-  // 펼침 버튼 모양
-  function setExpStyle(v){
-    expStyle=v;
-    grid.classList.remove('xs-chev','xs-chev2','xs-count','xs-dots','xs-text');
-    grid.classList.add('xs-'+v);
-  }
-  document.getElementById('expStyle').addEventListener('change',function(e){
-    setExpStyle(e.target.value);
-    try{localStorage.setItem('edent_xstyle',expStyle);}catch(err){}
-    apply();
-  });
-  (function(){
-    var gm='acc';
-    try{ gm=localStorage.getItem('edent_gmode')||'acc'; }catch(err){}
-    if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='acc';
-    document.getElementById('groupMode').value=gm;
-    setGroupMode(gm);
-    var xs='chev';
-    try{ xs=localStorage.getItem('edent_xstyle')||'chev'; }catch(err){}
-    if(['chev','chev2','count','dots','text'].indexOf(xs)===-1) xs='chev';
-    document.getElementById('expStyle').value=xs;
-    setExpStyle(xs);
-  })();
 
   // 머릿행 클릭 정렬 (같은 열 재클릭 → 오름/내림 전환)
   function markSort(){
@@ -1195,8 +1213,43 @@
   }
   listBtn.addEventListener('click',function(){setView('list');});
   gridBtn.addEventListener('click',function(){setView('grid');});
-  var savedView='list'; try{savedView=localStorage.getItem(VIEW_KEY)||'list';}catch(e){}
-  setView(savedView);
+
+  // ----- 초기화: 이전 화면 상태가 있으면 그대로 복원 -----
+  (function(){
+    var st=loadState();
+    var gm='acc';
+    try{ gm=localStorage.getItem('edent_gmode')||'acc'; }catch(e){}
+    if(st&&st.groupMode) gm=st.groupMode;
+    if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='acc';
+    document.getElementById('groupMode').value=gm;
+    setGroupMode(gm);
+
+    var vw='list';
+    try{ vw=localStorage.getItem(VIEW_KEY)||'list'; }catch(e){}
+    if(st&&st.viewMode) vw=st.viewMode;
+
+    if(st){
+      q=st.q||''; qEl.value=q;
+      if(st.sortKey) sortKey=st.sortKey;
+      if(st.sortDir) sortDir=st.sortDir;
+      favOnly=!!st.favOnly; favFilterBtn.classList.toggle('on',favOnly);
+      if(st.shop&&st.shop.length){ fShop=new Set(st.shop); }
+      if(st.cat &&st.cat.length){  fCat =new Set(st.cat);  }
+      if(st.comp){ fComp=new Set(st.comp); }
+      if(st.compQ) document.getElementById('compQ').value=st.compQ;
+      if(st.exp) expanded=new Set(st.exp);
+      markSort();
+    }
+    setView(vw);                                  // 내부에서 apply() 호출
+
+    if(st){
+      // 스크롤 위치까지 복원 (그 지점까지 목록을 미리 그려둠)
+      var need=st.shown||0;
+      var guard=0;
+      while(shown<need && shown<display.length && guard++<200) renderMore();
+      if(st.scroll) setTimeout(function(){ window.scrollTo(0,st.scroll); },60);
+    }
+  })();
 })();
 </script>
 </body>
