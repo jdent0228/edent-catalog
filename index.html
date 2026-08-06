@@ -80,8 +80,8 @@
     border:1px solid var(--line-strong);border-radius:6px;padding:4px 0;cursor:pointer;}
   .lnk-clear:hover{background:var(--hover);color:var(--text);}
 
-  /* 모바일: 사이드바 → 접이식 (기본 접힘) */
-  @media (max-width:860px){
+  /* 좌측 필터 → 접이식 (기본 접힘) */
+  @media (max-width:1200px){
     .layout{flex-direction:column;gap:10px;margin-top:10px;}
     .left{flex:none;width:100%;gap:10px;}
     .side{position:static;width:100%;max-height:none;padding:0;overflow:visible;}
@@ -334,8 +334,32 @@
   .viewgrid .price{display:flex;flex-direction:column;gap:1px;}
   .viewgrid .acts{display:flex;gap:1px;}
 
-  /* ===================== 모바일 (≤700px) ===================== */
-  @media (max-width:700px){
+  /* ============ 창이 좁아질 때 단계별 축소 (열이 절대 잘리지 않도록) ============
+     ≤1200px : 좌측 필터를 접이식으로 (가장 먼저 숨김)
+     ≤1060px : 포장 열 숨김
+     ≤980px  : 사진 열 숨김
+     ≤880px  : 남은 열 폭 축소
+     ≤760px  : 모바일 카드형                                                   */
+  @media (max-width:1060px){
+    .c-pkg{display:none;}
+    .lhead,.grid.viewlist{min-width:864px;}
+  }
+  @media (max-width:980px){
+    .c-img{display:none;}
+    .lhead,.grid.viewlist{min-width:808px;}
+  }
+  @media (max-width:880px){
+    .c-cat{flex:0 0 66px;width:66px;}
+    .c-comp{flex:0 0 84px;}
+    .c-spec{flex:0 0 132px;}
+    .c-price{flex:0 0 112px;}
+    .c-act{flex:0 0 56px;}
+    .c-main{min-width:140px;}
+    .lhead,.grid.viewlist{min-width:0;}
+  }
+
+  /* ===================== 모바일 카드형 (≤760px) ===================== */
+  @media (max-width:760px){
     .wrap{padding:0 10px 60px;}
     .table-zone{overflow-x:visible;}
     .lhead{display:none !important;}
@@ -348,7 +372,9 @@
                    [더보기]             ← 최하단 중앙          */
     .viewlist .card{flex-wrap:wrap;align-items:flex-start;padding:9px 11px;row-gap:4px;
       position:relative;}
-    .viewlist .c-img,.viewlist .c-pkg{display:none;}
+    .viewlist .c-img,.viewlist .c-pkg{display:none !important;}
+    /* 카드형에서는 폭 제한 해제 (열 축소 규칙 무효화) */
+    .viewlist .c-cat,.viewlist .c-comp,.viewlist .c-spec,.viewlist .c-price,.viewlist .c-act{width:auto;}
 
     .viewlist .c-cat{flex:1 1 100%;order:1;padding:0 74px 0 0;text-align:left;font-size:10.5px;
       display:flex;align-items:center;gap:5px;}
