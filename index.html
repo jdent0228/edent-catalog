@@ -143,16 +143,23 @@
   .m-acc .grp:hover{border-color:var(--line-strong);box-shadow:0 3px 12px rgba(0,0,0,.05);}
   .m-acc .grp.open{border-color:var(--blue);box-shadow:0 3px 14px rgba(49,130,246,.10);}
   .m-acc .card{border:0;border-radius:0;background:none;box-shadow:none;}
-  .m-acc .kids{display:none;padding:0 12px 10px;}
+  /* 펼친 규격 행: 대표행과 같은 열 위치를 그대로 사용 */
+  .m-acc .kids{display:none;border-top:1px dashed var(--line);background:#fbfcfd;}
   .m-acc .grp.open .kids{display:block;}
-  .m-acc .ktable{border-top:1px solid var(--line);}
-  .m-acc .krow{display:flex;align-items:center;gap:10px;padding:6px 4px;font-size:12px;cursor:pointer;}
-  .m-acc .krow+.krow{border-top:1px solid #f1f3f5;}
-  .m-acc .krow:hover{background:var(--hover);}
-  .m-acc .krow .ks{flex:1;min-width:0;color:var(--text);font-weight:600;word-break:keep-all;}
-  .m-acc .krow .kp{flex:0 0 84px;color:var(--muted-2);}
-  .m-acc .krow .kprice{flex:0 0 100px;text-align:right;font-weight:800;color:var(--blue);white-space:nowrap;}
-  .m-acc .krow .kact{flex:0 0 58px;display:flex;justify-content:flex-end;gap:0;}
+  .m-acc .kid{padding:4px 0;}
+  .m-acc .kid+.kid{border-top:1px solid #f1f3f5;}
+  .m-acc .kid:hover{background:var(--hover);}
+  .m-acc .kid .c-cat,.m-acc .kid .c-comp,.m-acc .kid .nm{visibility:hidden;}
+  .m-acc .kid .thumb{width:30px;height:30px;opacity:.8;}
+  .m-acc .kid .c-spec .spec-txt{font-weight:600;color:var(--text);}
+
+  /* 규격 열: 대표규격 / 외 N / 더보기 */
+  .spec-etc{font-size:11px;color:var(--muted);margin-top:1px;}
+  .spec-btn{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;color:var(--blue);
+    background:var(--blue-soft);border-radius:5px;padding:1px 9px;cursor:pointer;user-select:none;}
+  .spec-btn:hover{background:var(--blue);color:#fff;}
+  .grp.open .spec-btn{background:var(--panel);color:var(--muted-2);}
+  .grp.open .spec-btn:hover{background:var(--line-strong);color:var(--text);}
 
   /* 그룹 요약(가격 범위/규격 수) */
   .grange{font-size:10.5px;color:var(--muted);font-weight:500;}
@@ -279,10 +286,10 @@
     <div class="search">
       <input id="q" type="search" placeholder="상품명·규격·코드 검색 (초성 가능)" autocomplete="off">
       <select id="groupMode" title="같은 상품의 규격 묶음 표시 방식">
-        <option value="table">A · 표형 (펼침)</option>
-        <option value="chips">B · 규격칩 (한 줄)</option>
-        <option value="acc">C · 카드 아코디언</option>
-        <option value="flat">D · 전체 나열</option>
+        <option value="acc">규격 묶기 (기본)</option>
+        <option value="table">표형</option>
+        <option value="chips">규격칩</option>
+        <option value="flat">전체 나열</option>
       </select>
       <button class="favbtn" id="favFilter" title="즐겨찾기만 보기">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -726,31 +733,40 @@
       '<div class="c-price">'+priceHTML(lead)+'</div>'+
       '<div class="c-act">'+actHTML(lead)+favBtnHTML(lead)+'</div></div>';
   }
-  // C. 카드 아코디언: 그룹=카드, 펼치면 카드 안에 규격 미니표
+  // C. 카드 아코디언: 그룹=카드, 규격 열의 '더보기'로 펼침.
+  //    펼친 규격 행은 대표행과 동일한 열 위치(규격·포장·가격)를 그대로 사용.
   function grpAccHTML(g){
     var ms=g.ms, lead=ms[0], n=ms.length;
     if(n===1) return '<div class="grp">'+rowHTML(lead)+'</div>';
-    var head='<div class="card lead" data-toggle="1">'+
+    var open=expanded.has(g.gk);
+    var head='<div class="card lead" data-url="'+esc(lead.url)+'">'+
       '<div class="c-cat">'+esc(lead.cat1||'')+
         '<br><span class="shop-tag shop-'+esc(lead.shop)+'">'+esc(SHOPS[lead.shop]||lead.shop)+'</span></div>'+
       '<div class="c-img">'+thumbHTML(lead)+'</div>'+
       '<div class="c-comp"><div class="comp-txt">'+(lead.company?hl(lead.company):'-')+'</div>'+
         (lead.country?'<div class="comp-ct">'+esc(lead.country)+'</div>':'')+'</div>'+
-      '<div class="c-main"><div class="nm"><span class="caret">▶</span>'+hl(lead.name)+
-        '<span class="gcount">규격 '+n+'</span></div></div>'+
-      '<div class="c-spec"><div class="spec-txt">'+n+'종</div></div>'+
+      '<div class="c-main"><div class="nm">'+hl(lead.name)+'</div></div>'+
+      '<div class="c-spec">'+
+        '<div class="spec-txt">'+(lead.spec?hl(lead.spec):'기본')+'</div>'+
+        '<div class="spec-etc">외 '+(n-1)+'</div>'+
+        '<div class="spec-btn" data-toggle="1">'+(open?'접기':'더보기')+'</div></div>'+
       '<div class="c-pkg"><div class="pkg-txt">'+esc(lead.pkg||'-')+'</div></div>'+
-      '<div class="c-price">'+priceRange(ms)+'</div>'+
-      '<div class="c-act"></div></div>';
-    var rows=ms.map(function(m){
-      return '<div class="krow" data-url="'+esc(m.url)+'">'+
-        '<span class="ks">'+(m.spec?hl(m.spec):'기본')+'</span>'+
-        '<span class="kp">'+esc(m.pkg||'')+'</span>'+
-        '<span class="kprice">'+(mainPrice(m)!=null?won(mainPrice(m)):'문의')+'</span>'+
-        '<span class="kact">'+actHTML(m)+favBtnHTML(m)+'</span></div>';
+      '<div class="c-price">'+priceHTML(lead)+'</div>'+
+      '<div class="c-act">'+actHTML(lead)+favBtnHTML(lead)+'</div></div>';
+    // 대표(첫 규격)는 위에 이미 있으므로 나머지만 펼침
+    var kids=ms.slice(1).map(function(m){
+      return '<div class="card kid" data-url="'+esc(m.url)+'">'+
+        '<div class="c-cat"></div>'+
+        '<div class="c-img">'+thumbHTML(m)+'</div>'+
+        '<div class="c-comp"></div>'+
+        '<div class="c-main"><div class="nm">.</div></div>'+
+        '<div class="c-spec"><div class="spec-txt">'+(m.spec?hl(m.spec):'기본')+'</div></div>'+
+        '<div class="c-pkg"><div class="pkg-txt">'+esc(m.pkg||'-')+'</div></div>'+
+        '<div class="c-price">'+priceHTML(m)+'</div>'+
+        '<div class="c-act">'+actHTML(m)+favBtnHTML(m)+'</div></div>';
     }).join('');
-    return '<div class="grp'+(expanded.has(g.gk)?' open':'')+'" data-gk="'+esc(g.gk)+'">'+
-      head+'<div class="kids"><div class="ktable">'+rows+'</div></div></div>';
+    return '<div class="grp'+(open?' open':'')+'" data-gk="'+esc(g.gk)+'">'+
+      head+'<div class="kids">'+kids+'</div></div>';
   }
   function groupHTML(g){
     if(viewMode!=='list') return g.ms.map(cardHTML).join('');
@@ -807,14 +823,13 @@
       var grp=tg.closest('.grp');
       if(grp){
         grp.classList.toggle('open');
-        if(grp.classList.contains('open')) expanded.add(grp.dataset.gk);
-        else expanded.delete(grp.dataset.gk);
+        var isOpen=grp.classList.contains('open');
+        if(isOpen) expanded.add(grp.dataset.gk); else expanded.delete(grp.dataset.gk);
+        var btn=grp.querySelector('.spec-btn');
+        if(btn) btn.textContent=isOpen?'접기':'더보기';
       }
       return;
     }
-    // 아코디언 내부 규격 행 → 해당 상세 새탭
-    var kr=e.target.closest('.krow');
-    if(kr && !e.target.closest('.iconbtn')){ window.open(kr.dataset.url,'_blank','noopener'); return; }
     var imgEl=e.target.closest('.act-img');
     if(imgEl){
       imgModalPic.onerror=function(){ this.onerror=null; this.src=imgEl.dataset.fallback; };
@@ -864,9 +879,9 @@
     apply();
   });
   (function(){
-    var gm='table';
-    try{ gm=localStorage.getItem('edent_gmode')||'table'; }catch(err){}
-    if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='table';
+    var gm='acc';
+    try{ gm=localStorage.getItem('edent_gmode')||'acc'; }catch(err){}
+    if(['table','chips','acc','flat'].indexOf(gm)===-1) gm='acc';
     document.getElementById('groupMode').value=gm;
     setGroupMode(gm);
   })();

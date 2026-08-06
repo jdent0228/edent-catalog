@@ -27,6 +27,31 @@ foreach ($src in @(
   Write-Host "$($src.label): $n개 ($($d.generatedAt))"
 }
 
+# 숨은 검색키워드 붙이기 (harvest-keywords.ps1 산출물)
+$kwFile = Join-Path $PSScriptRoot 'keywords-map.json'
+if (Test-Path $kwFile) {
+  try {
+    $kwCache = Get-Content $kwFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $byId = @{}
+    foreach ($p in $kwCache.map.PSObject.Properties) {
+      foreach ($id in $p.Value) {
+        if (-not $byId.ContainsKey($id)) { $byId[$id] = [System.Collections.Generic.List[string]]::new() }
+        $byId[$id].Add($p.Name)
+      }
+    }
+    $applied = 0
+    foreach ($it in $all) {
+      if ($it.shop -ne 'edent') { continue }
+      $k = [string]$it.id
+      if ($byId.ContainsKey($k)) {
+        $it | Add-Member -NotePropertyName kw -NotePropertyValue ($byId[$k] -join ' ') -Force
+        $applied++
+      }
+    }
+    Write-Host "숨은 키워드 적용: 상품 $applied개 (키워드 $($kwCache.map.PSObject.Properties.Count)종)"
+  } catch { Write-Warning "keywords-map.json 적용 실패: $($_.Exception.Message)" }
+}
+
 # 안전장치: 병합 결과가 비정상적으로 적으면 기존 data.js를 덮어쓰지 않는다
 $prevCount = 0
 $prevFile = Join-Path $PSScriptRoot 'data.json'

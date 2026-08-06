@@ -476,40 +476,9 @@ if ($Details) {
   [System.IO.File]::WriteAllText($mapFile, ($cmapOut | ConvertTo-Json -Depth 3), $encM)
   Write-Host "제조국 맵 저장: 회사 $($cmap.Count)곳 (신규 조회 $($cv)회)"
 
-  # ================= 4.8 검색 키워드 하베스팅 =================
-  # 이덴트는 상품마다 화면에 없는 검색키워드(DB 전용)를 갖고 있음 (예: 877 버 → "torpedo").
-  # keywords.txt의 각 단어를 이덴트 검색(/search/search.php)에 조회해,
-  # 결과 상품들에 해당 키워드를 kw 필드로 붙임 → 뷰어 검색 색인에 포함됨.
-  $kwFile = Join-Path $PSScriptRoot 'keywords.txt'
-  if (Test-Path $kwFile) {
-    $kws = @(Get-Content $kwFile -Encoding UTF8 | ForEach-Object { $_.Trim() } |
-      Where-Object { $_ -and -not $_.StartsWith('#') })
-    Write-Host "키워드 하베스팅: $($kws.Count)개 단어"
-    foreach ($kw in $kws) {
-      $enc1 = [System.Uri]::EscapeDataString($kw)
-      $page = 1; $maxp = 1
-      while ($page -le $maxp -and $page -le 5) {
-        try { $sh = Get-Html "$Base/search/search.php?top_stx=$enc1&top_sca=5&page=$page" } catch { break }
-        if ($page -eq 1) { $maxp = Get-MaxPage $sh }
-        $hits = [regex]::Matches($sh, 'item\.php\?pd_idx=(\d+)') |
-          ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-        foreach ($hid in $hits) {
-          if ($items.ContainsKey($hid)) {
-            $rec = $items[$hid]
-            if (-not $rec.PSObject.Properties['kw']) {
-              $rec | Add-Member -NotePropertyName kw -NotePropertyValue $kw
-            } elseif ($rec.kw -notmatch [regex]::Escape($kw)) {
-              $rec.kw = "$($rec.kw) $kw"
-            }
-          }
-        }
-        if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
-        $page++
-      }
-    }
-    Write-Host "키워드 하베스팅 완료"
-  }
 }
+# (숨은 검색키워드는 harvest-keywords.ps1 이 keywords-map.json 으로 수집하고,
+#  build.ps1 이 상품에 kw 필드로 붙인다.)
 
 # ================= 5. 출력 =================
 # 멀티샵 구조: 이 크롤러는 data-edent.json만 생성. 통합본(data.js)은 build.ps1이 만든다.
