@@ -142,67 +142,59 @@ foreach ($xc in $xcodes) {
 #   예) "토마스 게이트 바 32mm" / "토마스 게이트 바 25mm"
 # 같은 회사의 상품명들을 비교해 '공통 접두어(=진짜 상품명)'와 '뒤에 남는 부분(=규격)'을 찾는다.
 # 규칙 기반 추측이 아니라, 실제 데이터에서 2개 이상이 공유하는 접두어만 인정한다.
-function Common-Prefix([string]$a, [string]$b) {
-  $n = [Math]::Min($a.Length, $b.Length); $i = 0
-  while ($i -lt $n -and $a[$i] -eq $b[$i]) { $i++ }
-  $a.Substring(0, $i)
-}
-function Trim-AtWord([string]$s) {
-  # 단어/구분자 경계에서 자름 (낱말 중간에서 끊기지 않도록)
-  $t = $s.TrimEnd()
-  $m = [regex]::Match($t, '^(.*[\s\(\[\-/,])[^\s\(\[\-/,]*$')
-  if ($m.Success -and $m.Groups[1].Value.Trim().Length -ge 6) { return $m.Groups[1].Value.TrimEnd(" ", "(", "[", "-", "/", ",") }
-  return $t
+# 규격으로 인정하는 '이름 끝' 패턴만 떼어낸다 (문장 중간을 자르지 않도록 보수적으로)
+#   #678771 / 32mm / (22.5mm) / 4.0x10mm  같은 규격·치수 표기
+$SPEC_RX = @(
+  '\s*(#[A-Za-z0-9][A-Za-z0-9\-\.\/]*)$',
+  '\s*\(?(\d+(?:\.\d+)?\s?(?:mm|cm|ml|㎜|㎝|g|kg|인치|호))\)?$',
+  '\s*(\d+(?:\.\d+)?\s?[xX×]\s?\d+(?:\.\d+)?\s?(?:mm|cm|㎜)?)$'
+)
+function Split-Spec([string]$nm) {
+  $base = $nm.Trim(); $spec = ''
+  for ($pass = 0; $pass -lt 2; $pass++) {
+    $hit = $false
+    foreach ($rx in $SPEC_RX) {
+      $m = [regex]::Match($base, $rx)
+      if ($m.Success) {
+        $cand = $base.Substring(0, $m.Index).TrimEnd()
+        # 괄호가 열린 채 끊기면(문장 중간) 분리하지 않음
+        $ob = ([regex]::Matches($cand, '[\(\[]')).Count
+        $cb = ([regex]::Matches($cand, '[\)\]]')).Count
+        if ($cand.Length -ge 8 -and $ob -eq $cb) {
+          $spec = ($m.Groups[1].Value.Trim() + ' ' + $spec).Trim()
+          $base = $cand; $hit = $true; break
+        }
+      }
+    }
+    if (-not $hit) { break }
+  }
+  , @($base, $spec)
 }
 
-$byCompany = @{}
+$specSet = 0
 foreach ($it in $items.Values) {
-  $ck = if ($it.company) { $it.company } else { '(무)' }
-  if (-not $byCompany.ContainsKey($ck)) { $byCompany[$ck] = [System.Collections.Generic.List[object]]::new() }
-  $byCompany[$ck].Add($it)
+  $r = Split-Spec $it.name
+  if ($r[1]) { $it.name = $r[0]; $it.spec = $r[1]; $specSet++ }
 }
-$specSet = 0; $groupSet = 0
-foreach ($ck in $byCompany.Keys) {
-  $arr = @($byCompany[$ck] | Sort-Object name)
-  $i = 0
-  while ($i -lt $arr.Count) {
-    # 연속한 상품들과 공통 접두어를 공유하는 구간을 묶음
-    $j = $i + 1; $pref = $null
-    while ($j -lt $arr.Count) {
-      $cp = Common-Prefix $arr[$i].name $arr[$j].name
-      $cp = Trim-AtWord $cp
-      $minLen = [Math]::Min($arr[$i].name.Length, $arr[$j].name.Length)
-      if ($cp.Length -ge 8 -and $cp.Length -ge ($minLen * 0.5)) {
-        if ($null -eq $pref -or $cp.Length -lt $pref.Length) { $pref = $cp }
-        $j++
-      } else { break }
-    }
-    $cnt = $j - $i
-    if ($cnt -ge 2 -and $pref) {
-      # 남는 꼬리가 너무 길면(=사실상 다른 상품) 규격으로 보지 않음
-      $tails = @(); $ok = $true
-      for ($k = $i; $k -lt $j; $k++) {
-        $tail = $arr[$k].name.Substring([Math]::Min($pref.Length, $arr[$k].name.Length)).Trim()
-        $tail = $tail.TrimStart(" ", ",", "-", "/", "(", "[")
-        if ($tail.Length -gt 30) { $ok = $false; break }
-        $tails += $tail
-      }
-      if ($ok) {
-        $gid = $arr[$i].id
-        for ($k = $i; $k -lt $j; $k++) {
-          $t = $tails[$k - $i]
-          if ($t) { $arr[$k].spec = $t; $specSet++ }
-          $arr[$k].name = $pref
-          $arr[$k].gid = $gid
-        }
-        $arr[$i].hasGroup = $true
-        $groupSet++
-      }
-    }
-    $i = $j
-  }
+# 같은 회사·같은 상품명이면서 규격이 서로 다른 것들만 그룹으로 묶는다
+$groupSet = 0
+$gkey = @{}
+foreach ($it in $items.Values) {
+  if (-not $it.spec) { continue }
+  $k = "$($it.company)|$($it.name)"
+  if (-not $gkey.ContainsKey($k)) { $gkey[$k] = [System.Collections.Generic.List[object]]::new() }
+  $gkey[$k].Add($it)
 }
-Write-Host "규격 분리: $specSet개 상품 / 그룹 $groupSet개"
+foreach ($k in $gkey.Keys) {
+  $arr = @($gkey[$k])
+  if ($arr.Count -lt 2) { continue }
+  if (@($arr | ForEach-Object { $_.spec } | Sort-Object -Unique).Count -lt 2) { continue }
+  $gid = ($arr | Sort-Object spec)[0].id
+  foreach ($m in $arr) { $m.gid = $gid }
+  ($arr | Where-Object { $_.id -eq $gid })[0].hasGroup = $true
+  $groupSet++
+}
+Write-Host "규격 분리: $($specSet)개 상품 / 그룹 $($groupSet)개"
 
 # ================= 4. 안전장치 + 출력 =================
 # 크롤이 사실상 실패했는데 좋은 데이터를 덮어쓰는 것을 막는다.
